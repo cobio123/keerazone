@@ -67,6 +67,7 @@
   </main>
 
   <script src="assets/js/config.js"></script>
+  <script src="assets/js/catalog.js"></script>
   <script src="assets/js/mockdata.js"></script>
   <script src="assets/js/store.js"></script>
   <script src="assets/js/ui.js"></script>
@@ -83,7 +84,13 @@
         $('stats').innerHTML = `<div class="error">${esc(e.message)}</div>`;
         return;
       }
-      const sports = byId(cat.sports);
+      // แสดงเฉพาะรายการที่เปิดรับ (รายการที่แอดมินปิดไว้ยังอยู่ในไฟล์ส่งออกรายโรงเรียน)
+      const allEvents = cat.events;
+      const allSports = byId(cat.sports);
+      cat.sports = cat.sports.filter((sp) => sp.active !== false);
+      const openSportIds = new Set(cat.sports.map((sp) => sp.id));
+      cat.events = cat.events.filter((ev) => ev.active !== false && openSportIds.has(ev.sport_id));
+      const sports = allSports;
       const schools = byId(cat.schools, 'code');
       const subs = {};
       data.submissions.forEach((s) => { subs[s.school_code] = s.updated_at; });
@@ -112,7 +119,7 @@
       $('asof').textContent = 'ข้อมูล ณ ' + thaiDateTime(new Date().toISOString()) + (latest ? ' · มีการแก้ไขล่าสุด ' + thaiDateTime(latest) : '');
       $('group-note').textContent = `ประมาณการเบื้องต้น: แบ่งสายละประมาณ ${PER} ทีม แข่งพบกันหมดในสาย ใช้วางแผนสนามและวันแข่งเท่านั้น ฝ่ายเทคนิคกีฬาแต่ละชนิดเป็นผู้กำหนดจริง`;
 
-      const totalEntries = data.intents.length;
+      const totalEntries = cat.events.reduce((a, ev) => a + (byEvent[ev.id] || []).length, 0);
       const totalMatches = cat.events.reduce((a, ev) => a + plan((byEvent[ev.id] || []).length).matches, 0);
       const activeEvents = cat.events.filter((ev) => (byEvent[ev.id] || []).length > 0).length;
       $('stats').innerHTML = [
@@ -143,7 +150,7 @@
           const warn = list.length === 1 ? ' <span class="pill warn">มีโรงเรียนเดียว</span>' : list.length === 0 ? ' <span class="pill">ไม่มีผู้แจ้ง</span>' : '';
           return `<tr>
             <td>${esc(sports[ev.sport_id] ? sports[ev.sport_id].name : ev.sport_id)}</td>
-            <td>${esc(ev.category)} · ${esc(ev.gender)} · รุ่น ${esc(ev.division)}${warn}</td>
+            <td>${esc(ev.category)} · ${esc(ev.gender)} · ${esc(ev.division)}${warn}</td>
             <td class="num">${list.length}</td>
             <td class="num">${p.groups || '—'}</td>
             <td class="num">${p.matches || '—'}</td>
@@ -181,7 +188,7 @@
         downloadCSV('keerazone-summary-by-event.csv', rows);
       });
       $('csv-detail').addEventListener('click', () => {
-        const evs = byId(cat.events);
+        const evs = byId(allEvents);
         const rows = [['รหัสโรงเรียน', 'โรงเรียน', 'อำเภอ', 'กีฬา', 'ประเภท', 'เพศ', 'รุ่น', 'บันทึกล่าสุด']];
         data.intents.forEach((r) => {
           const s = schools[r.school_code] || {}, ev = evs[r.event_id] || {};

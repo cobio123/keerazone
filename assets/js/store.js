@@ -11,7 +11,9 @@
   function demoState() {
     let s = null;
     try { s = JSON.parse(localStorage.getItem(DEMO_KEY)); } catch (e) { s = null; }
-    return s || { intents: {}, submittedAt: {}, pins: {}, settings: { open_at: null, close_at: null, note: '' } };
+    s = s || { intents: {}, submittedAt: {}, pins: {}, settings: { open_at: null, close_at: null, note: '' } };
+    s.catalog = s.catalog || { sports: {}, events: {} };
+    return s;
   }
   function demoSave(s) {
     try { localStorage.setItem(DEMO_KEY, JSON.stringify(s)); } catch (e) { /* ignore */ }
@@ -28,6 +30,23 @@
     const all = Object.assign({}, window.MOCK.submittedAt, s.submittedAt);
     return Object.entries(all).map(([school_code, updated_at]) => ({ school_code, updated_at }));
   }
+  // รายการกีฬา: ข้อมูลตั้งต้นจาก catalog.js + ส่วนที่แอดมินแก้ในเครื่องนี้
+  function demoCatalog() {
+    const c = demoState().catalog;
+    const merge = (base, over) => {
+      const m = {};
+      base.forEach((x) => { m[x.id] = Object.assign({}, x); });
+      Object.values(over).forEach((x) => { m[x.id] = Object.assign({}, m[x.id] || {}, x); });
+      return Object.values(m).sort((a, b) => (a.sort - b.sort) || String(a.id).localeCompare(String(b.id)));
+    };
+    return { sports: merge(window.MOCK.sports, c.sports), events: merge(window.MOCK.events, c.events) };
+  }
+  function nextEventId(events, sportId) {
+    const nums = events.filter((e) => e.sport_id === sportId)
+      .map((e) => Number(String(e.id).split('-').pop()) || 0);
+    return `${sportId}-${String(Math.max(0, ...nums) + 1).padStart(2, '0')}`;
+  }
+
   function demoPin(code) {
     const s = demoState();
     return s.pins[code] || window.MOCK.DEMO_PIN;
@@ -74,11 +93,12 @@
 
     async catalog() {
       if (!LIVE) {
-        return { schools: window.MOCK.schools, sports: window.MOCK.sports, events: window.MOCK.events };
+        const c = demoCatalog();
+        return { schools: window.MOCK.schools, sports: c.sports, events: c.events };
       }
       const [schools, sports, events] = await Promise.all([
         rest('schools?select=code,name,district&order=code'),
-        rest('sports?select=*&order=sort'),
+        rest('sports?select=*&order=sort,id'),
         rest('events?select=*&order=sort,id'),
       ]);
       return { schools, sports, events };
@@ -121,6 +141,8 @@
         if (!isOpen(s.settings)) throw new Error('ระบบปิดรับความประสงค์แล้ว กรุณาติดต่อฝ่ายจัดการแข่งขัน');
         if (pin !== demoPin(code)) throw new Error('รหัสโรงเรียนหรือ PIN ไม่ถูกต้อง');
         const now = new Date().toISOString();
+        const open = new Set(demoCatalog().events.filter((e) => e.active !== false).map((e) => e.id));
+        eventIds = eventIds.filter((id) => open.has(id));
         s.intents[code] = eventIds.slice();
         s.submittedAt[code] = now;
         demoSave(s);
@@ -187,6 +209,51 @@
           return;
         }
         await rpc('admin_save_intents', { p_code: code, p_event_ids: eventIds }, adminToken().access_token);
+      },
+      // เพิ่ม/แก้ชนิดกีฬา: ไม่มี id = เพิ่มใหม่ (id คือรหัสย่อภาษาอังกฤษ เช่น ATH)
+      async saveSport(sport) {
+        sport = Object.assign({}, sport);
+        if (!LIVE) {
+          const s = demoState();
+          const all = demoCatalog().sports;
+          sport.id = String(sport.id || '').trim().toUpperCase();
+          if (!/^[A-Z0-9]{2,6}$/.test(sport.id)) throw new Error('รหัสกีฬาต้องเป็นอักษรอังกฤษหรือตัวเลข 2–6 ตัว เช่น ATH');
+          if (sport.isNew && all.some((x) => x.id === sport.id)) throw new Error('มีรหัสกีฬา ' + sport.id + ' อยู่แล้ว');
+          const prev = all.find((x) => x.id === sport.id);
+          delete sport.isNew;
+          if (!prev) sport.sort = Math.max(0, ...all.map((x) => x.sort || 0)) + 1;
+          if (sport.active === undefined) sport.active = true;
+          s.catalog.sports[sport.id] = Object.assign({}, prev || {}, sport);
+          demoSave(s);
+          return s.catalog.sports[sport.id];
+        }
+        return rpc('admin_save_sport', { p_sport: sport }, adminToken().access_token);
+      },
+      // เพิ่ม/แก้รายการแข่งขัน: ไม่มี id = เพิ่มใหม่ ระบบตั้ง id ให้ (เช่น ATH-07) และไม่เปลี่ยนอีก
+      async saveEvent(ev) {
+        ev = Object.assign({}, ev);
+        ['category', 'gender', 'division'].forEach((k) => {
+          ev[k] = String(ev[k] || '').trim();
+          if (!ev[k]) throw new Error('กรุณากรอกประเภท เพศ และรุ่นให้ครบ');
+        });
+        if (!LIVE) {
+          const s = demoState();
+          const c = demoCatalog();
+          const dup = c.events.find((x) => x.id !== ev.id && x.sport_id === ev.sport_id &&
+            x.category === ev.category && x.gender === ev.gender && x.division === ev.division);
+          if (dup) throw new Error('มีรายการนี้อยู่แล้ว (' + dup.id + ')');
+          if (!ev.id) {
+            ev.id = nextEventId(c.events, ev.sport_id);
+            // ต่อท้ายรายการของกีฬานั้น (หน้าเว็บจัดกลุ่มตามกีฬาอยู่แล้ว)
+            ev.sort = Math.max(0, ...c.events.filter((x) => x.sport_id === ev.sport_id).map((x) => x.sort || 0)) + 0.01;
+            if (ev.active === undefined) ev.active = true;
+          }
+          const prev = c.events.find((x) => x.id === ev.id) || {};
+          s.catalog.events[ev.id] = Object.assign({}, prev, ev);
+          demoSave(s);
+          return s.catalog.events[ev.id];
+        }
+        return rpc('admin_save_event', { p_event: ev }, adminToken().access_token);
       },
       resetDemo() {
         localStorage.removeItem(DEMO_KEY);
