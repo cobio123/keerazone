@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>แจ้งความประสงค์ส่งกีฬา</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <main>
+    <div class="wrap">
+      <!-- ขั้นที่ 1: เข้าระบบ -->
+      <section id="login-view" style="max-width:440px;margin:0 auto">
+        <div class="page-head">
+          <h1>แจ้งความประสงค์ส่งกีฬา</h1>
+          <p>ใช้รหัสโรงเรียนและ PIN 6 หลักที่ได้รับจากฝ่ายจัดการแข่งขัน ไม่ต้องใช้บัญชี Gmail</p>
+        </div>
+        <form class="card" id="login-form" autocomplete="off">
+          <div class="field">
+            <label for="code">รหัสโรงเรียน</label>
+            <input type="text" id="code" placeholder="เช่น CYP001" required autocapitalize="characters" list="school-list">
+            <datalist id="school-list"></datalist>
+          </div>
+          <div class="field">
+            <label for="pin">PIN 6 หลัก</label>
+            <input type="password" id="pin" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required>
+          </div>
+          <div class="field">
+            <button class="btn" type="submit" style="width:100%">เข้าสู่ระบบ</button>
+          </div>
+          <div id="login-error" class="error hidden"></div>
+          <p class="small muted" id="demo-hint" style="margin-top:12px"></p>
+        </form>
+      </section>
+
+      <!-- ขั้นที่ 2: เลือกรายการ -->
+      <section id="form-view" class="hidden">
+        <div class="page-head row between">
+          <div>
+            <h1 id="school-name"></h1>
+            <p class="muted" id="school-meta" style="margin:0"></p>
+          </div>
+          <button class="btn ghost small" id="logout">ออกจากระบบ</button>
+        </div>
+
+        <div class="notice" id="closed-note" style="margin-bottom:16px"></div>
+        <p class="muted small">ติ๊กรายการที่โรงเรียนจะส่งเข้าแข่งขัน (1 ทีม/คน ต่อรายการ) กดหัวข้อกีฬาเพื่อเปิด–ปิด</p>
+
+        <div class="row" style="margin-bottom:12px">
+          <button class="btn ghost small" id="expand-all" type="button">เปิดทุกกีฬา</button>
+          <button class="btn ghost small" id="collapse-all" type="button">ปิดทุกกีฬา</button>
+        </div>
+
+        <div id="sports"></div>
+
+        <div class="savebar">
+          <div class="wrap row between" style="padding:0">
+            <div>
+              <strong id="sel-count">0</strong> รายการที่เลือก
+              <div class="small muted" id="saved-at"></div>
+            </div>
+            <button class="btn" id="save" type="button">บันทึกความประสงค์</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/mockdata.js"></script>
+  <script src="assets/js/store.js"></script>
+  <script src="assets/js/ui.js"></script>
+  <script>
+    (async function () {
+      const { esc, toast, thaiDateTime } = UI;
+      const SESSION = 'keerazone_school_session';
+      const $ = (id) => document.getElementById(id);
+      let catalog, session, dirty = false, isOpen = true;
+
+      try {
+        catalog = await Store.catalog();
+      } catch (e) {
+        $('login-error').textContent = e.message;
+        $('login-error').classList.remove('hidden');
+        return;
+      }
+
+      if (Store.mode === 'demo') {
+        $('demo-hint').innerHTML = 'โหมดสาธิต: ลองรหัส <b>CYP001</b> PIN <b>111111</b> (ทุกโรงเรียนใช้ PIN เดียวกัน)';
+        $('school-list').innerHTML = catalog.schools.map((s) => `<option value="${esc(s.code)}">${esc(s.name)}</option>`).join('');
+      }
+
+      // จำการเข้าระบบไว้เฉพาะแท็บนี้ (ปิดแท็บแล้วหายไป)
+      try {
+        const saved = JSON.parse(sessionStorage.getItem(SESSION));
+        if (saved) await doLogin(saved.code, saved.pin, true);
+      } catch (e) { sessionStorage.removeItem(SESSION); }
+
+      $('login-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await doLogin($('code').value, $('pin').value, false);
+      });
+
+      async function doLogin(code, pin, silent) {
+        const err = $('login-error');
+        err.classList.add('hidden');
+        try {
+          const res = await Store.login(code, pin);
+          session = { code: res.school.code, pin: String(pin).trim() };
+          try { sessionStorage.setItem(SESSION, JSON.stringify(session)); } catch (e) { /* ignore */ }
+          isOpen = res.is_open !== false;
+          renderForm(res);
+        } catch (ex) {
+          if (silent) throw ex;
+          err.textContent = ex.message;
+          err.classList.remove('hidden');
+        }
+      }
+
+      function renderForm(res) {
+        $('login-view').classList.add('hidden');
+        $('form-view').classList.remove('hidden');
+        $('school-name').textContent = res.school.name;
+        $('school-meta').textContent = `รหัส ${res.school.code} · อำเภอ${res.school.district}`;
+        $('saved-at').textContent = res.updated_at ? 'บันทึกล่าสุด ' + thaiDateTime(res.updated_at) : 'ยังไม่เคยบันทึก';
+
+        Store.settings().then((s) => {
+          const note = $('closed-note');
+          if (!isOpen) {
+            note.className = 'error';
+            note.textContent = 'ระบบปิดรับความประสงค์แล้ว ดูข้อมูลได้แต่แก้ไขไม่ได้ หากต้องการแก้กรุณาติดต่อฝ่ายจัดการแข่งขัน';
+          } else if (s.close_at) {
+            note.textContent = 'แก้ไขได้ถึง ' + thaiDateTime(s.close_at) + (s.note ? ' · ' + s.note : '');
+          } else {
+            note.textContent = s.note || 'แก้ไขได้จนกว่าฝ่ายจัดจะปิดรับ';
+          }
+        });
+
+        const chosen = new Set(res.event_ids || []);
+        const bySport = {};
+        catalog.events.forEach((ev) => { (bySport[ev.sport_id] = bySport[ev.sport_id] || []).push(ev); });
+
+        $('sports').innerHTML = catalog.sports.map((sp) => {
+          const evs = bySport[sp.id] || [];
+          const groups = {};
+          evs.forEach((ev) => {
+            const k = ev.category + ' · ' + ev.gender;
+            (groups[k] = groups[k] || []).push(ev);
+          });
+          const n = evs.filter((ev) => chosen.has(ev.id)).length;
+          return `<details class="sport" data-sport="${esc(sp.id)}" ${n ? 'open' : ''}>
+            <summary>${esc(sp.name)} <span class="small muted">(${esc(sp.kind)})</span>
+              <span class="count ${n ? 'on' : ''}">เลือก ${n}/${evs.length}</span></summary>
+            <div class="sport-body">
+              ${Object.entries(groups).map(([k, list]) => `
+                <div class="cat"><h4>${esc(k)}</h4>
+                  <div class="chips">${list.map((ev) => `
+                    <label class="chip"><input type="checkbox" value="${esc(ev.id)}" ${chosen.has(ev.id) ? 'checked' : ''} ${isOpen ? '' : 'disabled'}>
+                      <span>รุ่น ${esc(ev.division)}</span></label>`).join('')}
+                  </div></div>`).join('')}
+            </div></details>`;
+        }).join('');
+
+        $('save').disabled = !isOpen;
+        updateCounts();
+      }
+
+      function selectedIds() {
+        return [...document.querySelectorAll('#sports input:checked')].map((i) => i.value);
+      }
+
+      function updateCounts() {
+        document.querySelectorAll('.sport').forEach((d) => {
+          const all = d.querySelectorAll('input').length;
+          const on = d.querySelectorAll('input:checked').length;
+          const c = d.querySelector('.count');
+          c.textContent = `เลือก ${on}/${all}`;
+          c.classList.toggle('on', on > 0);
+        });
+        $('sel-count').textContent = selectedIds().length;
+      }
+
+      $('sports').addEventListener('change', () => { dirty = true; updateCounts(); });
+      $('expand-all').addEventListener('click', () => document.querySelectorAll('.sport').forEach((d) => { d.open = true; }));
+      $('collapse-all').addEventListener('click', () => document.querySelectorAll('.sport').forEach((d) => { d.open = false; }));
+
+      $('save').addEventListener('click', async () => {
+        const btn = $('save');
+        btn.disabled = true;
+        btn.textContent = 'กำลังบันทึก…';
+        try {
+          const ids = selectedIds();
+          const res = await Store.saveIntents(session.code, session.pin, ids);
+          dirty = false;
+          $('saved-at').textContent = 'บันทึกล่าสุด ' + thaiDateTime(res.updated_at);
+          toast(`บันทึกแล้ว ${ids.length} รายการ`);
+        } catch (e) {
+          toast(e.message, 'error');
+        } finally {
+          btn.disabled = !isOpen;
+          btn.textContent = 'บันทึกความประสงค์';
+        }
+      });
+
+      $('logout').addEventListener('click', () => {
+        if (dirty && !confirm('ยังไม่ได้บันทึก ต้องการออกจากระบบหรือไม่?')) return;
+        sessionStorage.removeItem(SESSION);
+        dirty = false;
+        location.reload();
+      });
+
+      window.addEventListener('beforeunload', (e) => {
+        if (dirty) { e.preventDefault(); e.returnValue = ''; }
+      });
+    })();
+  </script>
+</body>
+</html>

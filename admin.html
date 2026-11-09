@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ผู้ดูแลระบบ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <main>
+    <div class="wrap">
+      <section id="login-view" style="max-width:440px;margin:0 auto">
+        <div class="page-head">
+          <h1>ผู้ดูแลระบบ</h1>
+          <p>สำหรับทีมฝ่ายจัดการแข่งขัน 1–3 คน แต่ละคนมีบัญชีของตัวเอง</p>
+        </div>
+        <form class="card" id="login-form">
+          <div class="field"><label for="email">อีเมล</label><input type="email" id="email" autocomplete="username"></div>
+          <div class="field"><label for="password">รหัสผ่าน</label><input type="password" id="password" autocomplete="current-password" required></div>
+          <div class="field"><button class="btn" type="submit" style="width:100%">เข้าสู่ระบบ</button></div>
+          <div id="login-error" class="error hidden"></div>
+          <p class="small muted" id="demo-hint" style="margin-top:12px"></p>
+        </form>
+      </section>
+
+      <section id="admin-view" class="hidden stack">
+        <div class="page-head row between" style="margin-bottom:0">
+          <h1 style="margin:0">ผู้ดูแลระบบ</h1>
+          <button class="btn ghost small" id="logout">ออกจากระบบ</button>
+        </div>
+
+        <form class="card" id="settings-form">
+          <h2>ช่วงเวลาเปิดรับความประสงค์</h2>
+          <p class="muted small">ตามมติที่ประชุม เว้นว่าง = ไม่จำกัด หลังวันปิดรับโรงเรียนแก้ไขเองไม่ได้ แต่ผู้ดูแลยังแก้แทนได้</p>
+          <div class="grid grid-2">
+            <div><label for="open_at">เปิดรับ</label><input type="datetime-local" id="open_at"></div>
+            <div><label for="close_at">ปิดรับ</label><input type="datetime-local" id="close_at"></div>
+          </div>
+          <div class="field" style="margin-top:12px"><label for="note">ข้อความถึงโรงเรียน (แสดงในหน้าแจ้งความประสงค์)</label>
+            <input type="text" id="note" placeholder="เช่น สอบถามโทร 08x-xxx-xxxx"></div>
+          <div class="row" style="margin-top:12px">
+            <button class="btn" type="submit">บันทึกการตั้งค่า</button>
+            <span class="small muted" id="open-state"></span>
+          </div>
+        </form>
+
+        <div class="card">
+          <div class="row between">
+            <h2 style="margin:0">โรงเรียนและ PIN</h2>
+            <div class="row">
+              <button class="btn secondary small" id="issue-pins">ออก PIN ให้โรงเรียนที่ยังไม่มี (ไฟล์ Excel)</button>
+              <button class="btn ghost small hidden" id="reset-demo">ล้างข้อมูลสาธิต</button>
+            </div>
+          </div>
+          <p class="muted small" style="margin-top:8px">PIN เก็บแบบเข้ารหัส ผู้ดูแลดูย้อนหลังไม่ได้ ถ้าโรงเรียนลืมให้กด “ออก PIN ใหม่” แล้วแจ้งโรงเรียน</p>
+          <input type="text" id="f-school" placeholder="ค้นหาโรงเรียน" style="max-width:320px;margin-bottom:12px">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>รหัส</th><th>โรงเรียน</th><th class="num">รายการ</th><th>สถานะ</th><th></th></tr></thead>
+              <tbody id="schools"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card hidden" id="edit-card">
+          <div class="row between">
+            <h2 style="margin:0" id="edit-title"></h2>
+            <button class="btn ghost small" id="edit-close">ปิด</button>
+          </div>
+          <p class="muted small">แก้ความประสงค์แทนโรงเรียน (ใช้ได้แม้ปิดรับแล้ว)</p>
+          <div id="edit-sports"></div>
+          <div class="row" style="margin-top:12px"><button class="btn" id="edit-save">บันทึกแทนโรงเรียน</button></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/mockdata.js"></script>
+  <script src="assets/js/store.js"></script>
+  <script src="assets/js/ui.js"></script>
+  <script>
+    (async function () {
+      const { esc, toast, thaiDateTime, downloadCSV } = UI;
+      const $ = (id) => document.getElementById(id);
+      let cat, data, editing = null;
+
+      if (Store.mode === 'demo') {
+        $('demo-hint').innerHTML = 'โหมดสาธิต: ใส่อีเมลอะไรก็ได้ รหัสผ่าน <b>admin</b>';
+        $('email').required = false;
+        $('reset-demo').classList.remove('hidden');
+      } else {
+        $('email').required = true;
+      }
+
+      $('login-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        $('login-error').classList.add('hidden');
+        try {
+          await Store.admin.signIn($('email').value.trim(), $('password').value);
+          await showAdmin();
+        } catch (ex) {
+          $('login-error').textContent = ex.message;
+          $('login-error').classList.remove('hidden');
+        }
+      });
+      $('logout').addEventListener('click', () => { Store.admin.signOut(); location.reload(); });
+
+      if (Store.admin.isSignedIn()) showAdmin();
+
+      // datetime-local <-> ISO
+      const toLocal = (iso) => {
+        if (!iso) return '';
+        const d = new Date(iso);
+        const p = (n) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+      };
+      const fromLocal = (v) => (v ? new Date(v).toISOString() : null);
+
+      async function showAdmin() {
+        $('login-view').classList.add('hidden');
+        $('admin-view').classList.remove('hidden');
+        [cat, data] = await Promise.all([Store.catalog(), Store.intents()]);
+        const s = await Store.settings();
+        $('open_at').value = toLocal(s.open_at);
+        $('close_at').value = toLocal(s.close_at);
+        $('note').value = s.note || '';
+        showOpenState(s);
+        renderSchools();
+      }
+
+      function showOpenState(s) {
+        $('open-state').innerHTML = Store.isOpen(s) ? '<span class="pill ok">ขณะนี้เปิดรับ</span>' : '<span class="pill warn">ขณะนี้ปิดรับ</span>';
+      }
+
+      $('settings-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+          const s = { open_at: fromLocal($('open_at').value), close_at: fromLocal($('close_at').value), note: $('note').value };
+          if (s.open_at && s.close_at && s.open_at > s.close_at) throw new Error('วันปิดรับต้องอยู่หลังวันเปิดรับ');
+          await Store.admin.saveSettings(s.open_at, s.close_at, s.note);
+          showOpenState(s);
+          toast('บันทึกการตั้งค่าแล้ว');
+        } catch (ex) { toast(ex.message, 'error'); }
+      });
+
+      function renderSchools() {
+        const q = $('f-school').value.trim();
+        const subs = {}, counts = {};
+        data.submissions.forEach((x) => { subs[x.school_code] = x.updated_at; });
+        data.intents.forEach((x) => { counts[x.school_code] = (counts[x.school_code] || 0) + 1; });
+        $('schools').innerHTML = cat.schools.filter((s) => !q || s.name.includes(q) || s.code.includes(q.toUpperCase()))
+          .map((s) => `<tr>
+            <td>${esc(s.code)}</td><td>${esc(s.name)}</td><td class="num">${counts[s.code] || 0}</td>
+            <td>${subs[s.code] ? `<span class="pill ok">แจ้งแล้ว</span> <span class="small muted">${esc(thaiDateTime(subs[s.code]))}</span>` : '<span class="pill warn">ยังไม่แจ้ง</span>'}</td>
+            <td style="white-space:nowrap">
+              <button class="btn ghost small" data-pin="${esc(s.code)}">ออก PIN ใหม่</button>
+              <button class="btn ghost small" data-edit="${esc(s.code)}">แก้แทน</button>
+            </td></tr>`).join('');
+      }
+      $('f-school').addEventListener('input', renderSchools);
+
+      $('schools').addEventListener('click', async (e) => {
+        const pinBtn = e.target.closest('[data-pin]');
+        const editBtn = e.target.closest('[data-edit]');
+        if (pinBtn) {
+          const code = pinBtn.dataset.pin;
+          if (!confirm(`ออก PIN ใหม่ให้ ${code}? PIN เดิมจะใช้ไม่ได้ทันที`)) return;
+          try {
+            const pin = await Store.admin.resetPin(code);
+            alert(`PIN ใหม่ของ ${code} คือ ${pin}\nกรุณาจดไว้และแจ้งโรงเรียน (ระบบจะไม่แสดงซ้ำ)`);
+          } catch (ex) { toast(ex.message, 'error'); }
+        }
+        if (editBtn) openEditor(editBtn.dataset.edit);
+      });
+
+      function openEditor(code) {
+        editing = code;
+        const school = cat.schools.find((s) => s.code === code);
+        const chosen = new Set(data.intents.filter((r) => r.school_code === code).map((r) => r.event_id));
+        $('edit-title').textContent = school.name;
+        $('edit-sports').innerHTML = cat.sports.map((sp) => `
+          <details class="sport" open><summary>${esc(sp.name)}</summary><div class="sport-body"><div class="chips">
+            ${cat.events.filter((ev) => ev.sport_id === sp.id).map((ev) => `
+              <label class="chip"><input type="checkbox" value="${esc(ev.id)}" ${chosen.has(ev.id) ? 'checked' : ''}>
+              <span>${esc(ev.category)} ${esc(ev.gender)} ${esc(ev.division)}</span></label>`).join('')}
+          </div></div></details>`).join('');
+        $('edit-card').classList.remove('hidden');
+        $('edit-card').scrollIntoView({ behavior: 'smooth' });
+      }
+      $('edit-close').addEventListener('click', () => $('edit-card').classList.add('hidden'));
+      $('edit-save').addEventListener('click', async () => {
+        const ids = [...document.querySelectorAll('#edit-sports input:checked')].map((i) => i.value);
+        try {
+          await Store.admin.saveIntentsFor(editing, ids);
+          data = await Store.intents();
+          renderSchools();
+          $('edit-card').classList.add('hidden');
+          toast(`บันทึกแทน ${editing} แล้ว (${ids.length} รายการ)`);
+        } catch (ex) { toast(ex.message, 'error'); }
+      });
+
+      $('issue-pins').addEventListener('click', async () => {
+        try {
+          const list = await Store.admin.issueMissingPins();
+          if (!list.length) { toast('ทุกโรงเรียนมี PIN แล้ว'); return; }
+          downloadCSV('PIN-โรงเรียน.csv', [['รหัสโรงเรียน', 'โรงเรียน', 'PIN']].concat(list.map((r) => [r.code, r.name, r.pin])));
+          toast(`ออก PIN ${list.length} โรงเรียน — เก็บไฟล์ไว้เป็นความลับ`);
+        } catch (ex) { toast(ex.message, 'error'); }
+      });
+
+      $('reset-demo').addEventListener('click', () => {
+        if (!confirm('ล้างข้อมูลที่ทดลองบันทึกในเครื่องนี้ กลับเป็นข้อมูลสมมติเริ่มต้น?')) return;
+        Store.admin.resetDemo();
+        location.reload();
+      });
+    })();
+  </script>
+</body>
+</html>
