@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ต้นแบบจัดการแข่งขัน</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <main>
+    <div class="wrap">
+      <div class="page-head">
+        <span class="pill live">ต้นแบบ · ข้อมูลสมมติทั้งหมด</span>
+        <h1 style="margin-top:8px">ต้นแบบระบบจัดการแข่งขัน</h1>
+        <p>ตัวอย่างระยะต่อไป: เมื่อแบ่งสายแล้ว ระบบสร้างตารางแข่งขันให้อัตโนมัติ ผู้จัดการแต่ละกีฬากรอกผลจากมือถือ
+           และตารางเหรียญรวมอัปเดตทันที ชื่อโรงเรียน วัน เวลา สนาม และผลการแข่งขันในหน้านี้เป็นข้อมูลสมมติ</p>
+      </div>
+
+      <div class="tabs" role="tablist">
+        <button role="tab" aria-selected="true" data-tab="schedule">ตารางการแข่งขัน</button>
+        <button role="tab" aria-selected="false" data-tab="medals">ตารางเหรียญรวม</button>
+      </div>
+
+      <section id="tab-schedule">
+        <div class="row" style="margin-bottom:12px">
+          <select id="f-day" aria-label="เลือกวัน" style="width:auto"></select>
+          <select id="f-sport" aria-label="เลือกกีฬา" style="width:auto"></select>
+          <span class="small muted" id="sched-count"></span>
+        </div>
+        <div id="schedule" class="stack"></div>
+      </section>
+
+      <section id="tab-medals" class="hidden">
+        <div class="grid grid-4" id="medal-stats" style="margin-bottom:16px"></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th class="num">อันดับ</th><th>โรงเรียน</th>
+              <th class="num"><span class="medal g" title="ทอง">ท</span></th>
+              <th class="num"><span class="medal s" title="เงิน">ง</span></th>
+              <th class="num"><span class="medal b" title="ทองแดง">ทด</span></th>
+              <th class="num">รวม</th>
+            </tr></thead>
+            <tbody id="medals"></tbody>
+          </table>
+        </div>
+        <p class="small muted" style="margin-top:8px">เรียงตามจำนวนเหรียญทอง แล้วเงิน แล้วทองแดง (ตามแบบสากล) · รายการที่มีผู้แข่งขันน้อยกว่า 2 โรงเรียนไม่นับเหรียญ</p>
+      </section>
+    </div>
+  </main>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/mockdata.js"></script>
+  <script src="assets/js/store.js"></script>
+  <script src="assets/js/ui.js"></script>
+  <script>
+    (function () {
+      const { esc, byId } = UI;
+      const $ = (id) => document.getElementById(id);
+      const M = window.MOCK;
+      const PER = (window.APP_CONFIG && APP_CONFIG.TEAMS_PER_GROUP) || 4;
+      const sports = byId(M.sports);
+      const schools = byId(M.schools, 'code');
+
+      // ตัวสุ่มแบบกำหนดค่าเริ่ม: ผลออกมาเหมือนเดิมทุกครั้งที่เปิด
+      let seed = 2569;
+      const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+      const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+      const byEvent = {};
+      M.intents.forEach((r) => { (byEvent[r.event_id] = byEvent[r.event_id] || []).push(r.school_code); });
+
+      // ---------------- ตารางแข่งขัน: ใช้กีฬาประเภททีมบางรายการเป็นตัวอย่าง
+      const days = ['2026-12-14', '2026-12-15', '2026-12-16', '2026-12-17'];
+      const venues = {
+        football: ['สนามฟุตบอล 1', 'สนามฟุตบอล 2'],
+        futsal: ['โรงยิมฟุตซอล'],
+        volleyball: ['โรงยิม A', 'โรงยิม B'],
+        basketball: ['สนามบาส 1'],
+        takraw: ['สนามตะกร้อ 1', 'สนามตะกร้อ 2'],
+      };
+      const sampleEvents = M.events.filter((ev) => venues[ev.sport_id] && (byEvent[ev.id] || []).length >= 3);
+      const times = ['08:30', '10:00', '13:00', '14:30', '16:00'];
+      const slotUse = {};
+      const matches = [];
+
+      sampleEvents.forEach((ev) => {
+        const teams = shuffle(byEvent[ev.id]);
+        const groupsN = teams.length <= PER + 1 ? 1 : Math.ceil(teams.length / PER);
+        const groups = Array.from({ length: groupsN }, () => []);
+        teams.forEach((t, i) => groups[i % groupsN].push(t));
+        groups.forEach((g, gi) => {
+          for (let i = 0; i < g.length; i++) {
+            for (let j = i + 1; j < g.length; j++) {
+              // หาช่องเวลาว่างแรกของกีฬานั้น
+              const vlist = venues[ev.sport_id];
+              let placed = false;
+              for (const d of days) {
+                for (const t of times) {
+                  for (const v of vlist) {
+                    const k = d + t + v;
+                    // สนามว่าง และทั้งสองทีมไม่มีนัดอื่นในวันเดียวกัน
+                    const ta = ev.id + g[i] + d, tb = ev.id + g[j] + d;
+                    if (!placed && !slotUse[k] && !slotUse[ta] && !slotUse[tb]) {
+                      slotUse[k] = slotUse[ta] = slotUse[tb] = 1;
+                      matches.push({ ev, group: String.fromCharCode(65 + gi), a: g[i], b: g[j], day: d, time: t, venue: v });
+                      placed = true;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        });
+      });
+
+      // สมมติว่าแข่งไปแล้ว 2 วันแรก
+      const goals = (sp) => sp === 'volleyball' || sp === 'takraw' ? null : Math.floor(rnd() * 4);
+      matches.forEach((m) => {
+        if (m.day > days[1]) return;
+        if (m.ev.sport_id === 'volleyball' || m.ev.sport_id === 'takraw') {
+          const aWin = rnd() < 0.5;
+          const lose = Math.floor(rnd() * 2);
+          m.score = aWin ? [2, lose] : [lose, 2];
+          m.unit = 'เซต';
+        } else if (m.ev.sport_id === 'basketball') {
+          m.score = [40 + Math.floor(rnd() * 40), 40 + Math.floor(rnd() * 40)];
+        } else {
+          m.score = [goals(m.ev.sport_id), goals(m.ev.sport_id)];
+        }
+      });
+      matches.sort((x, y) => (x.day + x.time + x.venue).localeCompare(y.day + y.time + y.venue));
+
+      const dayLabel = (d) => new Date(d + 'T00:00:00+07:00').toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Bangkok' });
+      $('f-day').innerHTML = '<option value="">ทุกวัน</option>' + days.map((d) => `<option value="${d}">${esc(dayLabel(d))}</option>`).join('');
+      const usedSports = [...new Set(sampleEvents.map((e) => e.sport_id))];
+      $('f-sport').innerHTML = '<option value="">ทุกกีฬา</option>' + usedSports.map((s) => `<option value="${s}">${esc(sports[s].name)}</option>`).join('');
+
+      function renderSchedule() {
+        const fd = $('f-day').value, fs = $('f-sport').value;
+        const list = matches.filter((m) => (!fd || m.day === fd) && (!fs || m.ev.sport_id === fs));
+        $('sched-count').textContent = `${list.length} นัด`;
+        const byDay = {};
+        list.forEach((m) => { (byDay[m.day] = byDay[m.day] || []).push(m); });
+        $('schedule').innerHTML = Object.keys(byDay).sort().map((d) => `
+          <div class="card" style="padding:0">
+            <div class="row between" style="padding:12px 16px;border-bottom:1px solid var(--border)">
+              <h3 style="margin:0">${esc(dayLabel(d))}</h3>
+              ${d <= days[1] ? '<span class="pill ok">แข่งแล้ว</span>' : '<span class="pill">กำหนดการ</span>'}
+            </div>
+            ${byDay[d].map((m) => `
+              <div class="match">
+                <span class="time">${m.time}</span>
+                <span class="team-a">${esc(schools[m.a].name)}</span>
+                <span class="score ${m.score ? '' : 'pending'}">${m.score ? m.score.join(' – ') : 'vs'}</span>
+                <span class="team-b">${esc(schools[m.b].name)}</span>
+                <span class="meta">${esc(sports[m.ev.sport_id].name)} ${esc(m.ev.category)} ${esc(m.ev.gender)} รุ่น ${esc(m.ev.division)} · สาย ${m.group} · ${esc(m.venue)}${m.unit ? ' · ผลเป็น' + m.unit : ''}</span>
+              </div>`).join('')}
+          </div>`).join('') || '<p class="muted">ไม่มีนัดแข่งในตัวกรองนี้</p>';
+      }
+      $('f-day').addEventListener('change', renderSchedule);
+      $('f-sport').addEventListener('change', renderSchedule);
+      renderSchedule();
+
+      // ---------------- ตารางเหรียญ: สมมติผลทุกรายการที่มี >= 2 โรงเรียน
+      const tally = {};
+      const add = (code, k) => { tally[code] = tally[code] || { g: 0, s: 0, b: 0 }; tally[code][k]++; };
+      let medalEvents = 0;
+      M.events.forEach((ev) => {
+        const t = byEvent[ev.id] || [];
+        if (t.length < 2) return;
+        medalEvents++;
+        const order = shuffle(t);
+        add(order[0], 'g');
+        add(order[1], 's');
+        if (order[2]) add(order[2], 'b');
+        if (order[3] && sports[ev.sport_id].kind !== 'บุคคล') add(order[3], 'b'); // กีฬาทีม: ทองแดงร่วม 2
+      });
+      const rows = Object.entries(tally).map(([code, t]) => ({ code, ...t, total: t.g + t.s + t.b }))
+        .sort((x, y) => y.g - x.g || y.s - x.s || y.b - x.b || schools[x.code].name.localeCompare(schools[y.code].name, 'th'));
+      let rank = 0, prev = null;
+      $('medals').innerHTML = rows.map((r, i) => {
+        const key = `${r.g}-${r.s}-${r.b}`;
+        if (key !== prev) { rank = i + 1; prev = key; }
+        return `<tr><td class="num">${rank}</td><td>${esc(schools[r.code].name)}</td>
+          <td class="num">${r.g}</td><td class="num">${r.s}</td><td class="num">${r.b}</td><td class="num"><strong>${r.total}</strong></td></tr>`;
+      }).join('');
+      const sum = (k) => rows.reduce((a, r) => a + r[k], 0);
+      $('medal-stats').innerHTML = [
+        [medalEvents, 'รายการที่ชิงเหรียญ'], [sum('g'), 'เหรียญทอง'], [sum('s'), 'เหรียญเงิน'], [sum('b'), 'เหรียญทองแดง'],
+      ].map(([n, l]) => `<div class="card stat"><div class="num">${n}</div><div class="lbl">${l}</div></div>`).join('');
+
+      // ---------------- แท็บ
+      document.querySelectorAll('.tabs button').forEach((b) => b.addEventListener('click', () => {
+        document.querySelectorAll('.tabs button').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
+        $('tab-schedule').classList.toggle('hidden', b.dataset.tab !== 'schedule');
+        $('tab-medals').classList.toggle('hidden', b.dataset.tab !== 'medals');
+      }));
+    })();
+  </script>
+</body>
+</html>

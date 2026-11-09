@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>สรุปความประสงค์</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <main>
+    <div class="wrap stack">
+      <div class="page-head row between" style="margin-bottom:0">
+        <div>
+          <h1>สรุปความประสงค์เข้าร่วมการแข่งขัน</h1>
+          <p class="muted" id="asof" style="margin:0"></p>
+        </div>
+        <div class="row no-print">
+          <button class="btn secondary small" id="csv-summary">ส่งออกสรุป (Excel)</button>
+          <button class="btn secondary small" id="csv-detail">ส่งออกรายโรงเรียน (Excel)</button>
+          <button class="btn ghost small" onclick="window.print()">พิมพ์</button>
+        </div>
+      </div>
+
+      <div class="grid grid-4" id="stats"></div>
+
+      <div class="card">
+        <h2>จำนวนการสมัครรวม แยกตามชนิดกีฬา</h2>
+        <p class="muted small">นับทุกรายการในกีฬานั้นรวมกัน (1 โรงเรียน × 1 รายการ = 1)</p>
+        <div class="bars" id="bars"></div>
+      </div>
+
+      <div class="card">
+        <div class="row between">
+          <h2 style="margin:0">รายการแข่งขันและประมาณการแบ่งสาย</h2>
+          <div class="row no-print">
+            <select id="f-sport" aria-label="กรองชนิดกีฬา" style="width:auto"></select>
+          </div>
+        </div>
+        <p class="muted small" id="group-note" style="margin-top:8px"></p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>กีฬา</th><th>รายการ</th><th class="num">โรงเรียน</th><th class="num">ประมาณสาย</th><th class="num">นัดรอบแบ่งสาย</th><th>โรงเรียนที่แจ้ง</th>
+            </tr></thead>
+            <tbody id="events"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>สถานะการแจ้งรายโรงเรียน</h2>
+        <div class="row no-print" style="margin-bottom:12px">
+          <input type="text" id="f-school" placeholder="ค้นหาชื่อโรงเรียนหรืออำเภอ" style="max-width:320px">
+          <label class="row small" style="font-weight:400;margin:0"><input type="checkbox" id="f-missing"> แสดงเฉพาะที่ยังไม่แจ้ง</label>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>รหัส</th><th>โรงเรียน</th><th>อำเภอ</th><th class="num">รายการ</th><th>สถานะ</th></tr></thead>
+            <tbody id="schools"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/mockdata.js"></script>
+  <script src="assets/js/store.js"></script>
+  <script src="assets/js/ui.js"></script>
+  <script>
+    (async function () {
+      const { esc, thaiDateTime, byId, downloadCSV } = UI;
+      const $ = (id) => document.getElementById(id);
+      const PER = (window.APP_CONFIG && APP_CONFIG.TEAMS_PER_GROUP) || 4;
+
+      let cat, data;
+      try {
+        [cat, data] = await Promise.all([Store.catalog(), Store.intents()]);
+      } catch (e) {
+        $('stats').innerHTML = `<div class="error">${esc(e.message)}</div>`;
+        return;
+      }
+      const sports = byId(cat.sports);
+      const schools = byId(cat.schools, 'code');
+      const subs = {};
+      data.submissions.forEach((s) => { subs[s.school_code] = s.updated_at; });
+
+      const byEvent = {};
+      const bySchool = {};
+      data.intents.forEach((r) => {
+        (byEvent[r.event_id] = byEvent[r.event_id] || []).push(r.school_code);
+        bySchool[r.school_code] = (bySchool[r.school_code] || 0) + 1;
+      });
+
+      // ประมาณการแบ่งสาย: สายละ ~PER ทีม แข่งพบกันหมดในสาย
+      function plan(n) {
+        if (n < 2) return { groups: n ? 1 : 0, matches: 0 };
+        const groups = n <= PER + 1 ? 1 : Math.ceil(n / PER);
+        const base = Math.floor(n / groups), extra = n % groups;
+        let matches = 0;
+        for (let g = 0; g < groups; g++) {
+          const k = base + (g < extra ? 1 : 0);
+          matches += (k * (k - 1)) / 2;
+        }
+        return { groups, matches };
+      }
+
+      const latest = data.submissions.map((s) => s.updated_at).sort().pop();
+      $('asof').textContent = 'ข้อมูล ณ ' + thaiDateTime(new Date().toISOString()) + (latest ? ' · มีการแก้ไขล่าสุด ' + thaiDateTime(latest) : '');
+      $('group-note').textContent = `ประมาณการเบื้องต้น: แบ่งสายละประมาณ ${PER} ทีม แข่งพบกันหมดในสาย ใช้วางแผนสนามและวันแข่งเท่านั้น ฝ่ายเทคนิคกีฬาแต่ละชนิดเป็นผู้กำหนดจริง`;
+
+      const totalEntries = data.intents.length;
+      const totalMatches = cat.events.reduce((a, ev) => a + plan((byEvent[ev.id] || []).length).matches, 0);
+      const activeEvents = cat.events.filter((ev) => (byEvent[ev.id] || []).length > 0).length;
+      $('stats').innerHTML = [
+        [`${data.submissions.length}/${cat.schools.length}`, 'โรงเรียนแจ้งแล้ว'],
+        [totalEntries, 'การสมัครทั้งหมด (ทีม/คน)'],
+        [`${activeEvents}/${cat.events.length}`, 'รายการที่มีผู้แจ้ง'],
+        [totalMatches, 'ประมาณนัดรอบแบ่งสาย'],
+      ].map(([n, l]) => `<div class="card stat"><div class="num">${esc(n)}</div><div class="lbl">${esc(l)}</div></div>`).join('');
+
+      // กราฟแท่งตามชนิดกีฬา
+      const perSport = cat.sports.map((sp) => ({
+        sp, n: cat.events.filter((ev) => ev.sport_id === sp.id).reduce((a, ev) => a + (byEvent[ev.id] || []).length, 0),
+      })).sort((a, b) => b.n - a.n);
+      const max = Math.max(1, ...perSport.map((x) => x.n));
+      $('bars').innerHTML = perSport.map(({ sp, n }) => `
+        <div class="bar-row"><span>${esc(sp.name)}</span>
+          <div class="bar-track"><div class="bar-fill" style="width:${(n / max) * 100}%"></div></div>
+          <span class="num" style="text-align:right">${n}</span></div>`).join('');
+
+      // ตารางรายการ
+      $('f-sport').innerHTML = '<option value="">ทุกชนิดกีฬา</option>' +
+        cat.sports.map((s) => `<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('');
+      function renderEvents() {
+        const f = $('f-sport').value;
+        $('events').innerHTML = cat.events.filter((ev) => !f || ev.sport_id === f).map((ev) => {
+          const list = (byEvent[ev.id] || []).map((c) => schools[c] ? schools[c].name : c).sort((a, b) => a.localeCompare(b, 'th'));
+          const p = plan(list.length);
+          const warn = list.length === 1 ? ' <span class="pill warn">มีโรงเรียนเดียว</span>' : list.length === 0 ? ' <span class="pill">ไม่มีผู้แจ้ง</span>' : '';
+          return `<tr>
+            <td>${esc(sports[ev.sport_id] ? sports[ev.sport_id].name : ev.sport_id)}</td>
+            <td>${esc(ev.category)} · ${esc(ev.gender)} · รุ่น ${esc(ev.division)}${warn}</td>
+            <td class="num">${list.length}</td>
+            <td class="num">${p.groups || '—'}</td>
+            <td class="num">${p.matches || '—'}</td>
+            <td>${list.length ? `<details><summary class="small">ดู ${list.length} โรงเรียน</summary><div class="small">${list.map(esc).join('<br>')}</div></details>` : ''}</td>
+          </tr>`;
+        }).join('');
+      }
+      $('f-sport').addEventListener('change', renderEvents);
+      renderEvents();
+
+      // ตารางรายโรงเรียน
+      function renderSchools() {
+        const q = $('f-school').value.trim();
+        const missing = $('f-missing').checked;
+        $('schools').innerHTML = cat.schools.filter((s) =>
+          (!q || s.name.includes(q) || s.district.includes(q) || s.code.includes(q.toUpperCase())) && (!missing || !subs[s.code])
+        ).map((s) => `<tr>
+            <td>${esc(s.code)}</td><td>${esc(s.name)}</td><td>${esc(s.district)}</td>
+            <td class="num">${bySchool[s.code] || 0}</td>
+            <td>${subs[s.code] ? `<span class="pill ok">แจ้งแล้ว</span> <span class="small muted">${esc(thaiDateTime(subs[s.code]))}</span>` : '<span class="pill warn">ยังไม่แจ้ง</span>'}</td>
+          </tr>`).join('');
+      }
+      $('f-school').addEventListener('input', renderSchools);
+      $('f-missing').addEventListener('change', renderSchools);
+      renderSchools();
+
+      // ส่งออก
+      $('csv-summary').addEventListener('click', () => {
+        const rows = [['กีฬา', 'ประเภท', 'เพศ', 'รุ่น', 'จำนวนโรงเรียน', 'ประมาณสาย', 'นัดรอบแบ่งสาย', 'โรงเรียน']];
+        cat.events.forEach((ev) => {
+          const list = (byEvent[ev.id] || []).map((c) => schools[c] ? schools[c].name : c);
+          const p = plan(list.length);
+          rows.push([sports[ev.sport_id] ? sports[ev.sport_id].name : ev.sport_id, ev.category, ev.gender, ev.division, list.length, p.groups, p.matches, list.join(' / ')]);
+        });
+        downloadCSV('สรุปความประสงค์-รายรายการ.csv', rows);
+      });
+      $('csv-detail').addEventListener('click', () => {
+        const evs = byId(cat.events);
+        const rows = [['รหัสโรงเรียน', 'โรงเรียน', 'อำเภอ', 'กีฬา', 'ประเภท', 'เพศ', 'รุ่น', 'บันทึกล่าสุด']];
+        data.intents.forEach((r) => {
+          const s = schools[r.school_code] || {}, ev = evs[r.event_id] || {};
+          rows.push([r.school_code, s.name, s.district, sports[ev.sport_id] ? sports[ev.sport_id].name : ev.sport_id,
+            ev.category, ev.gender, ev.division, subs[r.school_code] ? thaiDateTime(subs[r.school_code]) : '']);
+        });
+        downloadCSV('ความประสงค์-รายโรงเรียน.csv', rows);
+      });
+    })();
+  </script>
+</body>
+</html>

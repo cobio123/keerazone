@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ระบบกีฬานักเรียนชัยภูมิ ครั้งที่ 51</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <main>
+    <div class="wrap">
+      <div class="page-head">
+        <h1 id="title">ระบบสำรวจความประสงค์เข้าร่วมการแข่งขันกีฬา</h1>
+        <p>แต่ละโรงเรียนแจ้งล่วงหน้าว่าจะส่งกีฬาอะไร ประเภทไหน รุ่นอายุใด เพื่อให้ฝ่ายจัดการแข่งขันนำไปแบ่งสายแบบคร่าวๆ
+           ระยะนี้ยังไม่ส่งรายชื่อนักกีฬา จึงเปลี่ยนตัวผู้เล่นหน้างานได้ตามปกติโดยไม่ต้องแก้ในระบบ</p>
+      </div>
+
+      <div class="grid grid-4" id="stats"></div>
+
+      <h2 style="margin-top:28px">เลือกเมนู</h2>
+      <div class="grid grid-2">
+        <a class="card tile" href="survey.html">
+          <span class="tag">ใช้งานจริง</span>
+          <h3>แจ้งความประสงค์ (สำหรับโรงเรียน)</h3>
+          <p class="muted">เข้าด้วยรหัสโรงเรียน + PIN 6 หลัก ติ๊กรายการที่จะส่ง แก้ไขได้จนถึงวันปิดรับ</p>
+        </a>
+        <a class="card tile" href="summary.html">
+          <span class="tag">ใช้งานจริง</span>
+          <h3>สรุปความประสงค์ (สาธารณะ)</h3>
+          <p class="muted">จำนวนโรงเรียนต่อรายการ ประมาณการจำนวนสาย และส่งออกเป็นไฟล์ Excel</p>
+        </a>
+        <a class="card tile" href="competition.html">
+          <span class="tag demo">ต้นแบบ · ข้อมูลสมมติ</span>
+          <h3>ต้นแบบระบบจัดการแข่งขัน</h3>
+          <p class="muted">ตารางการแข่งขันและตารางเหรียญรวม เพื่อให้ที่ประชุมเห็นภาพระยะต่อไป</p>
+        </a>
+        <a class="card tile" href="admin.html">
+          <span class="tag">สำหรับฝ่ายจัด</span>
+          <h3>ผู้ดูแลระบบ</h3>
+          <p class="muted">ตั้งวันเปิด–ปิดรับ ออก PIN ให้โรงเรียน ติดตามว่าใครส่งแล้ว</p>
+        </a>
+      </div>
+
+      <div class="card" style="margin-top:24px">
+        <h2>ทำไมใช้ระบบนี้</h2>
+        <ul>
+          <li>ไม่มีค่าใช้จ่าย: หน้าเว็บอยู่บน GitHub Pages ฐานข้อมูลบน Supabase แผนฟรี</li>
+          <li>ไม่ต้องล็อกอิน Gmail: เปิดได้ทุกเครื่อง ทุกเบราว์เซอร์ รวมถึงมือถือ</li>
+          <li>ผูกกับ “ทีมของโรงเรียน” ไม่ใช่ตัวบุคคล: เปลี่ยนนักกีฬาหน้างานได้โดยไม่กระทบระบบ</li>
+          <li>ต่อยอดได้: ข้อมูลรายการแข่งขันชุดเดียวกันใช้ทำตารางแข่ง บันทึกผล และตารางเหรียญในระยะต่อไป</li>
+        </ul>
+      </div>
+    </div>
+  </main>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/mockdata.js"></script>
+  <script src="assets/js/store.js"></script>
+  <script src="assets/js/ui.js"></script>
+  <script>
+    (async function () {
+      const { esc } = UI;
+      try {
+        const [cat, data, settings] = await Promise.all([Store.catalog(), Store.intents(), Store.settings()]);
+        const submitted = data.submissions.length;
+        const open = Store.isOpen(settings);
+        const stats = [
+          [cat.schools.length, 'โรงเรียนทั้งหมด'],
+          [submitted, 'โรงเรียนแจ้งแล้ว'],
+          [cat.events.length, 'รายการแข่งขัน'],
+          [open ? 'เปิดรับ' : 'ปิดรับ', settings.close_at ? 'ปิดรับ ' + UI.thaiDateTime(settings.close_at, false) : 'สถานะระบบ'],
+        ];
+        document.getElementById('stats').innerHTML = stats.map(([n, l]) =>
+          `<div class="card stat"><div class="num">${esc(n)}</div><div class="lbl">${esc(l)}</div></div>`).join('');
+      } catch (e) {
+        document.getElementById('stats').innerHTML = `<div class="error">${esc(e.message)}</div>`;
+      }
+    })();
+  </script>
+</body>
+</html>
