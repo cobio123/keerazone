@@ -32,7 +32,8 @@
             <button class="btn" type="submit" style="width:100%">เข้าสู่ระบบ</button>
           </div>
           <div id="login-error" class="error hidden"></div>
-          <p class="small muted" id="demo-hint" style="margin-top:12px"></p>
+          <p class="small muted" style="margin-top:12px">ลืม PIN หรือยังไม่ได้รับ ติดต่อฝ่ายจัดการแข่งขันเพื่อขอ PIN ใหม่</p>
+          <p class="small muted" id="demo-hint"></p>
         </form>
       </section>
 
@@ -152,11 +153,11 @@
           });
           const n = evs.filter((ev) => chosen.has(ev.id)).length;
           return `<details class="sport" data-sport="${esc(sp.id)}" ${n ? 'open' : ''}>
-            <summary>${esc(sp.name)} <span class="small muted">(${esc(sp.kind)})</span>
+            <summary><h2 class="sport-title">${esc(sp.name)} <span class="kind">(${esc(sp.kind)})</span></h2>
               <span class="count ${n ? 'on' : ''}">เลือก ${n}/${evs.length}</span></summary>
             <div class="sport-body">
               ${Object.entries(groups).map(([k, list]) => `
-                <div class="cat"><h4>${esc(k)}</h4>
+                <div class="cat"><h3>${esc(k)}</h3>
                   <div class="chips">${list.map((ev) => `
                     <label class="chip"><input type="checkbox" value="${esc(ev.id)}" ${chosen.has(ev.id) ? 'checked' : ''} ${isOpen ? '' : 'disabled'}>
                       <span>รุ่น ${esc(ev.division)}</span></label>`).join('')}
