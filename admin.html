@@ -207,7 +207,7 @@
         try {
           const list = await Store.admin.issueMissingPins();
           if (!list.length) { toast('ทุกโรงเรียนมี PIN แล้ว'); return; }
-          downloadCSV('PIN-โรงเรียน.csv', [['รหัสโรงเรียน', 'โรงเรียน', 'PIN']].concat(list.map((r) => [r.code, r.name, r.pin])));
+          downloadCSV('keerazone-school-pins.csv', [['รหัสโรงเรียน', 'โรงเรียน', 'PIN']].concat(list.map((r) => [r.code, r.name, r.pin])));
           toast(`ออก PIN ${list.length} โรงเรียน — เก็บไฟล์ไว้เป็นความลับ`);
         } catch (ex) { toast(ex.message, 'error'); }
       });

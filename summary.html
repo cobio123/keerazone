@@ -178,7 +178,7 @@
           const p = plan(list.length);
           rows.push([sports[ev.sport_id] ? sports[ev.sport_id].name : ev.sport_id, ev.category, ev.gender, ev.division, list.length, p.groups, p.matches, list.join(' / ')]);
         });
-        downloadCSV('สรุปความประสงค์-รายรายการ.csv', rows);
+        downloadCSV('keerazone-summary-by-event.csv', rows);
       });
       $('csv-detail').addEventListener('click', () => {
         const evs = byId(cat.events);
@@ -188,7 +188,7 @@
           rows.push([r.school_code, s.name, s.district, sports[ev.sport_id] ? sports[ev.sport_id].name : ev.sport_id,
             ev.category, ev.gender, ev.division, subs[r.school_code] ? thaiDateTime(subs[r.school_code]) : '']);
         });
-        downloadCSV('ความประสงค์-รายโรงเรียน.csv', rows);
+        downloadCSV('keerazone-intents-by-school.csv', rows);
       });
     })();
   </script>
