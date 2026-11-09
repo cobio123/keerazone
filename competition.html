@@ -13,8 +13,7 @@
   <main>
     <div class="wrap">
       <div class="page-head">
-        <span class="pill live">ต้นแบบ · ข้อมูลสมมติทั้งหมด</span>
-        <h1 style="margin-top:8px">ต้นแบบระบบจัดการแข่งขัน</h1>
+        <h1>ต้นแบบระบบจัดการแข่งขัน</h1>
         <p>ตัวอย่างระยะต่อไป: เมื่อแบ่งสายแล้ว ระบบสร้างตารางแข่งขันให้อัตโนมัติ ผู้จัดการแต่ละกีฬากรอกผลจากมือถือ
            และตารางเหรียญรวมอัปเดตทันที ชื่อโรงเรียน วัน เวลา สนาม และผลการแข่งขันในหน้านี้เป็นข้อมูลสมมติ</p>
       </div>
@@ -39,9 +38,9 @@
           <table>
             <thead><tr>
               <th class="num">อันดับ</th><th>โรงเรียน</th>
-              <th class="num"><span class="medal g" title="ทอง">ท</span></th>
-              <th class="num"><span class="medal s" title="เงิน">ง</span></th>
-              <th class="num"><span class="medal b" title="ทองแดง">ทด</span></th>
+              <th class="num"><span class="medal g" aria-hidden="true"></span>ทอง</th>
+              <th class="num"><span class="medal s" aria-hidden="true"></span>เงิน</th>
+              <th class="num"><span class="medal b" aria-hidden="true"></span>ทองแดง</th>
               <th class="num">รวม</th>
             </tr></thead>
             <tbody id="medals"></tbody>
@@ -148,7 +147,7 @@
         $('schedule').innerHTML = Object.keys(byDay).sort().map((d) => `
           <div class="card" style="padding:0">
             <div class="row between" style="padding:12px 16px;border-bottom:1px solid var(--border)">
-              <h3 style="margin:0">${esc(dayLabel(d))}</h3>
+              <h2 style="margin:0;font-size:1.05rem">${esc(dayLabel(d))}</h2>
               ${d <= days[1] ? '<span class="pill ok">แข่งแล้ว</span>' : '<span class="pill">กำหนดการ</span>'}
             </div>
             ${byDay[d].map((m) => `

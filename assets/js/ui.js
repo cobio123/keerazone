@@ -23,7 +23,7 @@
             <small>${esc(cfg.EVENT_NAME || '')} ปีการศึกษา ${esc(cfg.ACADEMIC_YEAR || '')}</small>
           </span>
         </a>
-        <button class="nav-toggle" aria-label="เมนู" aria-expanded="false">☰</button>
+        <button class="nav-toggle" aria-label="เปิดเมนู" aria-expanded="false"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
         <nav class="site-nav">
           ${NAV.map(([href, label]) => `<a href="${href}" ${href === here ? 'aria-current="page"' : ''}>${label}</a>`).join('')}
         </nav>
