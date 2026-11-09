@@ -51,6 +51,8 @@
         <p class="muted small">ติ๊กรายการที่โรงเรียนจะส่งเข้าแข่งขัน (1 ทีม/คน ต่อรายการ) กดหัวข้อกีฬาเพื่อเปิด–ปิด</p>
 
         <div class="row" style="margin-bottom:12px">
+          <label for="find" class="sr-only">ค้นหารายการ</label>
+          <input type="text" id="find" placeholder="ค้นหารายการ เช่น 100 เมตร, ฟุตซอล" style="max-width:300px">
           <button class="btn ghost small" id="expand-all" type="button">เปิดทุกกีฬา</button>
           <button class="btn ghost small" id="collapse-all" type="button">ปิดทุกกีฬา</button>
         </div>
@@ -163,9 +165,12 @@
               ${info ? `<p class="small muted sport-info">${esc(info)}</p>` : ''}
               ${Object.entries(groups).map(([k, list]) => {
                 const notes = [...new Set(list.map((ev) => ev.note).filter(Boolean))];
+                // หมายเหตุต่างกันตามรุ่น (เช่น น้ำหนักอุปกรณ์) -> แสดงแยกรุ่น
+                const noteText = notes.length === 1 ? notes[0]
+                  : list.filter((ev) => ev.note).map((ev) => `${ev.division}: ${ev.note}`).join(' · ');
                 return `
                 <div class="cat"><h3>${esc(k)}</h3>
-                  ${notes.length === 1 ? `<p class="small muted cat-note">${esc(notes[0])}</p>` : ''}
+                  ${noteText ? `<p class="small muted cat-note">${esc(noteText)}</p>` : ''}
                   <div class="chips">${list.map((ev) => `
                     <label class="chip"><input type="checkbox" value="${esc(ev.id)}" ${chosen.has(ev.id) ? 'checked' : ''} ${isOpen ? '' : 'disabled'}>
                       <span>${esc(ev.division)}</span></label>`).join('')}
@@ -194,6 +199,21 @@
       }
 
       $('sports').addEventListener('change', () => { dirty = true; updateCounts(); });
+      // ค้นหา: ซ่อนกลุ่มที่ไม่ตรง และเปิดกีฬาที่มีกลุ่มตรง
+      $('find').addEventListener('input', () => {
+        const q = $('find').value.trim();
+        document.querySelectorAll('.sport').forEach((d) => {
+          const name = d.querySelector('.sport-title').textContent;
+          let any = false;
+          d.querySelectorAll('.cat').forEach((c) => {
+            const hit = !q || name.includes(q) || c.textContent.includes(q);
+            c.classList.toggle('hidden', !hit);
+            any = any || hit;
+          });
+          d.classList.toggle('hidden', !any);
+          if (q && any) d.open = true;
+        });
+      });
       $('expand-all').addEventListener('click', () => document.querySelectorAll('.sport').forEach((d) => { d.open = true; }));
       $('collapse-all').addEventListener('click', () => document.querySelectorAll('.sport').forEach((d) => { d.open = false; }));
 

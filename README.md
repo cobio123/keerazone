@@ -52,7 +52,7 @@ python3 -m http.server 8000
 index.html, survey.html, summary.html, admin.html, catalog.html, competition.html
 assets/css/style.css
 assets/js/config.js     ตั้งค่า Supabase และชื่องาน
-assets/js/catalog.js    รายการกีฬาตั้งต้น 18 ชนิด 118 รายการ (สร้างจากไฟล์ Excel ของฝ่ายจัด)
+assets/js/catalog.js    รายการกีฬาตั้งต้น 18 ชนิด 268 รายการ (สร้างจากไฟล์ Excel ของฝ่ายจัด)
 assets/js/mockdata.js   โรงเรียนและความประสงค์สมมติ สำหรับโหมดสาธิต
 assets/js/store.js      ชั้นข้อมูล (โหมดสาธิต / Supabase)
 assets/js/ui.js         เมนูและฟังก์ชันที่ใช้ร่วมกัน

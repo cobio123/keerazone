@@ -34,14 +34,16 @@
   // ความประสงค์สมมติ: ~80% ของโรงเรียนแจ้งแล้ว โอกาสส่งแต่ละรายการต่างกันตามชนิดกีฬา
   const rand = seeded(51);
   const popularity = {
-    ATH: 0.3, SWM: 0.12, TT: 0.08, BAD: 0.1, BOX: 0.06, MBX: 0.2, WLF: 0.15,
+    ATH: 0.1, SWM: 0.06, TT: 0.08, BAD: 0.1, BOX: 0.06, MBX: 0.2, WLF: 0.15,
     FTB: 0.35, FTS: 0.4, VOL: 0.28, BVL: 0.1, BSK: 0.12, B33: 0.1, TAK: 0.25,
     HDB: 0.08, PTQ: 0.2, ESP: 0.45, TQB: 0.05,
   };
   const intents = [];
   const submittedAt = {};
+  // โรงเรียนที่ยังไม่แจ้ง: กำหนดตายตัวให้ตรงกับบัญชีสาธิตในคู่มือ
+  const notYet = new Set(['CYP007', 'CYP012', 'CYP013', 'CYP023', 'CYP029', 'CYP033']);
   schools.forEach((sc) => {
-    if (rand() < 0.2) return; // ยังไม่แจ้ง
+    if (notYet.has(sc.code)) return;
     const day = 1 + Math.floor(rand() * 8);
     submittedAt[sc.code] = `2026-11-${String(day).padStart(2, '0')}T09:00:00+07:00`;
     events.forEach((ev) => {

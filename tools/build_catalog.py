@@ -32,8 +32,8 @@ def grid(category, genders=MF, ages=AGES, note=None):
     return [(category, g, a, note) for g in genders for a in ages]
 
 sports = [
-    ('ATH', 'กรีฑา', 'บุคคล', 'กรีฑา', grid('ลู่ / ลาน / ผลัด')),
-    ('SWM', 'ว่ายน้ำ', 'บุคคล', 'ว่ายน้ำ', grid('ฟรีสไตล์ / กรรเชียง / กบ / ผีเสื้อ / ผลัด')),
+    ('ATH', 'กรีฑา', 'บุคคล', 'กรีฑา', None),   # แยกรายละเอียดจากชีต "รายละเอียดกรีฑาและว่ายน้ำ"
+    ('SWM', 'ว่ายน้ำ', 'บุคคล', 'ว่ายน้ำ', None),
     ('TT', 'เทเบิลเทนนิส', 'บุคคล', 'เทเบิลเทนนิส',
         [(c, g, a, None) for (c, g) in [('เดี่ยว', 'ชาย'), ('เดี่ยว', 'หญิง'), ('คู่', 'ชาย'), ('คู่', 'หญิง'), ('คู่ผสม', 'ผสม')] for a in AGES]),
     ('BAD', 'แบดมินตัน', 'บุคคล', 'แบดมินตัน',
@@ -58,6 +58,55 @@ sports = [
          ('EA SPORTS FC Mobile (บุคคล)', 'ไม่จำกัดเพศ', 'ไม่เกิน 18 ปี (13–18 ปี)', 'ประเภทบุคคล')]),
     ('TQB', 'เทคบอล', 'บุคคล/ทีม', 'เทคบอล', [('ตามประกาศ', 'ชาย', 'ตามประกาศ', None), ('ตามประกาศ', 'หญิง', 'ตามประกาศ', None)]),
 ]
+
+# ---- กรีฑาและว่ายน้ำ: 1 รายการ = ชื่อรายการ × เพศ × รุ่น ตามชีตรายละเอียด
+import re
+DETAIL_PREFIX = {'วิ่งข้ามรั้ว': 'รั้วสูง ', 'เขย่งก้าวกระโดด': 'วัดระยะตั้งแต่ '}
+THROW = ('ทุ่มน้ำหนัก', 'ขว้างจักร', 'พุ่งแหลน')
+
+def genders_in(cell):
+    """คืน {เพศ: รายละเอียดในวงเล็บ} จากข้อความเช่น 'ชาย (4 กก.) / หญิง (3.63 กก.)', 'หญิงเท่านั้น (0.762 ม.)'"""
+    cell = str(cell or '').strip()
+    if cell in ('', '-'):
+        return {}
+    out = {}
+    for part in cell.split('/'):
+        part = part.strip()
+        m = re.match(r'(ชาย|หญิง)(?:เท่านั้น)?\s*(?:\((.*)\))?', part)
+        if m:
+            out[m.group(1)] = (m.group(2) or '').strip()
+    return out
+
+def detail_events(sport_name):
+    rows = []
+    for r in wb['รายละเอียดกรีฑาและว่ายน้ำ'].iter_rows(min_row=4, values_only=True):
+        if r[0] != sport_name:
+            continue
+        group, name, cells, remark = r[1], r[2], r[3:6], (r[6] or '').strip()
+        remark = '' if remark in ('-', 'ความสูงรั้วตามรุ่น', 'น้ำหนักอุปกรณ์ตามรุ่น') else remark
+        # 'ฟรีสไตล์ 50 ม. / 100 ม.' -> 2 รายการ
+        m = re.match(r'^(.*?)(\d[\d,]*\s*ม\.)\s*/\s*(\d[\d,]*\s*ม\.)$', name)
+        names = [m.group(1) + m.group(2), m.group(1) + m.group(3)] if m else [name]
+        for nm in names:
+            for g in ('ชาย', 'หญิง'):
+                for age, cell in zip(AGES, cells):
+                    gd = genders_in(cell)
+                    if g not in gd:
+                        continue
+                    detail = gd[g]
+                    if detail:
+                        prefix = 'น้ำหนักอุปกรณ์ ' if name in THROW else DETAIL_PREFIX.get(name, DETAIL_PREFIX.get(group, ''))
+                        detail = prefix + detail.replace('ม.', ' ม.').replace('  ', ' ').strip()
+                    rem = remark
+                    # หมายเหตุที่ระบุค่าแยกเพศ เช่น 'วัดระยะตั้งแต่ 3 ม. (หญิง) / 4 ม. (ชาย) ขึ้นไป' -> เอาเฉพาะเพศนี้
+                    per = dict((gg, v) for v, gg in re.findall(r'([\d.]+\s*ม\.)\s*\((ชาย|หญิง)\)', remark))
+                    if per:
+                        rem = '' if detail else 'วัดระยะตั้งแต่ ' + per[g].replace('ม.', ' ม.').replace('  ', ' ') + (' ขึ้นไป' if 'ขึ้นไป' in remark else '')
+                    note = ' · '.join(x for x in (detail, rem) if x)
+                    rows.append((nm, g, age, note))
+    return rows
+
+sports = [(c, n, k, sn, ev if ev is not None else detail_events(sn)) for (c, n, k, sn, ev) in sports]
 
 out_sports, out_events = [], []
 order = 0
