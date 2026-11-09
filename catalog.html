@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>จัดการรายการแข่งขัน</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <main>
+    <div class="wrap">
+      <section id="need-login" class="hidden" style="max-width:440px;margin:0 auto">
+        <div class="card">
+          <h1>จัดการรายการแข่งขัน</h1>
+          <p>หน้านี้สำหรับทีมแอดมิน กรุณาเข้าสู่ระบบที่หน้าผู้ดูแลก่อน</p>
+          <a class="btn" href="admin.html">ไปหน้าผู้ดูแลระบบ</a>
+        </div>
+      </section>
+
+      <section id="manage" class="hidden stack">
+        <div class="page-head row between" style="margin-bottom:0">
+          <div>
+            <h1 style="margin:0">จัดการรายการแข่งขัน</h1>
+            <p class="muted" style="margin:4px 0 0">เพิ่ม แก้ไข หรือปิดรับรายการ โรงเรียนจะเห็นเฉพาะรายการที่เปิดรับ</p>
+          </div>
+          <a class="btn ghost small" href="admin.html">กลับหน้าผู้ดูแล</a>
+        </div>
+
+        <div class="notice small">
+          ไม่มีปุ่มลบ เพื่อไม่ให้ความประสงค์ที่โรงเรียนแจ้งไว้หายไป ถ้าจะยกเลิกรายการให้กด “ปิดรับ” แทน
+          ข้อมูลเดิมยังอยู่ และเปิดรับกลับได้ทุกเมื่อ
+        </div>
+
+        <div class="card">
+          <div class="row between">
+            <div class="row">
+              <label for="sport" class="sr-only">ชนิดกีฬา</label>
+              <select id="sport" style="width:auto;min-width:220px"></select>
+              <span class="small muted" id="sport-state"></span>
+            </div>
+            <div class="row">
+              <button class="btn ghost small" id="edit-sport" type="button">แก้ไขข้อมูลกีฬานี้</button>
+              <button class="btn secondary small" id="new-sport" type="button">เพิ่มชนิดกีฬา</button>
+            </div>
+          </div>
+
+          <form id="sport-form" class="hidden" style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px">
+            <h2 id="sport-form-title" style="font-size:1.05rem"></h2>
+            <div class="grid grid-2">
+              <div><label for="sp-id">รหัสกีฬา (อักษรอังกฤษ 2–6 ตัว)</label><input type="text" id="sp-id" maxlength="6" autocapitalize="characters" placeholder="เช่น ATH"></div>
+              <div><label for="sp-name">ชื่อชนิดกีฬา</label><input type="text" id="sp-name" required></div>
+              <div><label for="sp-kind">ลักษณะ</label>
+                <select id="sp-kind"><option>ทีม</option><option>บุคคล</option><option>บุคคล/ทีม</option><option>ทีม/บุคคล</option></select></div>
+              <div><label for="sp-venue">สถานที่แข่งขัน</label><input type="text" id="sp-venue"></div>
+            </div>
+            <div class="field" style="margin-top:12px"><label for="sp-note">หมายเหตุ / เงื่อนไข (โรงเรียนเห็นในหน้าแจ้งความประสงค์)</label><input type="text" id="sp-note"></div>
+            <label class="row small" style="font-weight:400;margin-top:12px"><input type="checkbox" id="sp-active" checked> เปิดรับชนิดกีฬานี้</label>
+            <div class="row" style="margin-top:12px">
+              <button class="btn" type="submit">บันทึกชนิดกีฬา</button>
+              <button class="btn ghost" type="button" id="sport-cancel">ยกเลิก</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="row between">
+            <h2 style="margin:0" id="events-title">รายการแข่งขัน</h2>
+            <button class="btn small" id="new-event" type="button">เพิ่มรายการ</button>
+          </div>
+
+          <form id="event-form" class="hidden" style="margin:16px 0;padding:16px;border:1px solid var(--border);border-radius:var(--radius)">
+            <h3 id="event-form-title" style="margin-bottom:12px"></h3>
+            <div class="grid grid-2">
+              <div><label for="ev-category">ประเภท</label><input type="text" id="ev-category" list="dl-category" placeholder="เช่น ทีม, เดี่ยว, คู่ผสม" required></div>
+              <div><label for="ev-gender">เพศ</label>
+                <select id="ev-gender"><option>ชาย</option><option>หญิง</option><option>ผสม</option><option>ไม่จำกัดเพศ</option></select></div>
+              <div><label for="ev-division">รุ่น</label><input type="text" id="ev-division" list="dl-division" placeholder="เช่น ไม่เกิน 16 ปี" required></div>
+              <div><label for="ev-note">หมายเหตุ / จำกัดจำนวน</label><input type="text" id="ev-note"></div>
+            </div>
+            <label class="row small" style="font-weight:400;margin-top:12px"><input type="checkbox" id="ev-active" checked> เปิดรับรายการนี้</label>
+            <p class="small muted" id="ev-warning" style="margin:8px 0 0"></p>
+            <div class="row" style="margin-top:12px">
+              <button class="btn" type="submit">บันทึกรายการ</button>
+              <button class="btn ghost" type="button" id="event-cancel">ยกเลิก</button>
+            </div>
+            <datalist id="dl-category"></datalist>
+            <datalist id="dl-division"></datalist>
+          </form>
+
+          <div class="table-wrap" style="margin-top:12px;margin-bottom:0;border-bottom:1px solid var(--border)">
+            <table>
+              <thead><tr><th>ประเภท</th><th>เพศ</th><th>รุ่น</th><th>หมายเหตุ</th><th class="num">แจ้งแล้ว</th><th>สถานะ</th><th></th></tr></thead>
+              <tbody id="events"></tbody>
+            </table>
+          </div>
+          <p class="small muted" style="margin:12px 0 0" id="events-foot"></p>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/catalog.js"></script>
+  <script src="assets/js/mockdata.js"></script>
+  <script src="assets/js/store.js"></script>
+  <script src="assets/js/ui.js"></script>
+  <script>
+    (async function () {
+      const { esc, toast } = UI;
+      const $ = (id) => document.getElementById(id);
+      if (!Store.admin.isSignedIn()) { $('need-login').classList.remove('hidden'); return; }
+      $('manage').classList.remove('hidden');
+
+      let cat, counts = {}, editingEvent = null, sportMode = null;
+
+      async function load(keepSport) {
+        const [c, d] = await Promise.all([Store.catalog(), Store.intents()]);
+        cat = c;
+        counts = {};
+        d.intents.forEach((r) => { counts[r.event_id] = (counts[r.event_id] || 0) + 1; });
+        const current = keepSport || $('sport').value || (cat.sports[0] && cat.sports[0].id);
+        $('sport').innerHTML = cat.sports.map((s) =>
+          `<option value="${esc(s.id)}">${esc(s.name)} (${esc(s.id)})${s.active === false ? ' — ปิดรับ' : ''}</option>`).join('');
+        if (current) $('sport').value = current;
+        render();
+      }
+
+      const sport = () => cat.sports.find((s) => s.id === $('sport').value);
+      const sportEvents = () => cat.events.filter((e) => e.sport_id === $('sport').value);
+
+      function render() {
+        const sp = sport();
+        if (!sp) return;
+        const evs = sportEvents();
+        $('sport-state').innerHTML = sp.active === false ? '<span class="pill warn">ปิดรับทั้งกีฬา</span>' : '<span class="pill ok">เปิดรับ</span>';
+        $('events-title').textContent = `รายการแข่งขัน: ${sp.name}`;
+        $('events').innerHTML = evs.map((e) => `<tr>
+            <td>${esc(e.category)}</td><td class="nowrap">${esc(e.gender)}</td><td class="nowrap">${esc(e.division)}</td>
+            <td class="small" style="min-width:160px">${esc(e.note || '')}</td>
+            <td class="num">${counts[e.id] || 0}</td>
+            <td class="nowrap">${e.active === false ? '<span class="pill warn">ปิดรับ</span>' : '<span class="pill ok">เปิดรับ</span>'}</td>
+            <td style="white-space:nowrap">
+              <button class="btn ghost small" data-edit="${esc(e.id)}">แก้ไข</button>
+              <button class="btn ghost small" data-toggle="${esc(e.id)}">${e.active === false ? 'เปิดรับ' : 'ปิดรับ'}</button>
+            </td></tr>`).join('') || '<tr><td colspan="7" class="muted">ยังไม่มีรายการ กด “เพิ่มรายการ”</td></tr>';
+        const open = evs.filter((e) => e.active !== false).length;
+        $('events-foot').textContent = `ทั้งหมด ${evs.length} รายการ · เปิดรับ ${open} · ปิดรับ ${evs.length - open} · รหัสรายการ (เช่น ${evs[0] ? evs[0].id : sp.id + '-01'}) ระบบตั้งให้อัตโนมัติ`;
+        // ตัวช่วยกรอก: ประเภทและรุ่นที่มีอยู่แล้วในกีฬานี้
+        const uniq = (k) => [...new Set(evs.map((e) => e[k]))];
+        $('dl-category').innerHTML = uniq('category').map((v) => `<option value="${esc(v)}">`).join('');
+        $('dl-division').innerHTML = [...new Set(uniq('division').concat(['ไม่เกิน 14 ปี', 'ไม่เกิน 16 ปี', 'ไม่เกิน 18 ปี']))]
+          .map((v) => `<option value="${esc(v)}">`).join('');
+      }
+
+      $('sport').addEventListener('change', () => { closeForms(); render(); });
+
+      function closeForms() {
+        $('sport-form').classList.add('hidden');
+        $('event-form').classList.add('hidden');
+        editingEvent = null;
+      }
+
+      // ---------------- ชนิดกีฬา
+      function openSportForm(mode) {
+        sportMode = mode;
+        const sp = mode === 'edit' ? sport() : { id: '', name: '', kind: 'ทีม', venue: '', note: '', active: true };
+        $('sport-form-title').textContent = mode === 'edit' ? `แก้ไขชนิดกีฬา: ${sp.name}` : 'เพิ่มชนิดกีฬาใหม่';
+        $('sp-id').value = sp.id; $('sp-id').readOnly = mode === 'edit';
+        $('sp-name').value = sp.name; $('sp-kind').value = sp.kind || 'ทีม';
+        $('sp-venue').value = sp.venue || ''; $('sp-note').value = sp.note || '';
+        $('sp-active').checked = sp.active !== false;
+        $('sport-form').classList.remove('hidden');
+        (mode === 'edit' ? $('sp-name') : $('sp-id')).focus();
+      }
+      $('edit-sport').addEventListener('click', () => openSportForm('edit'));
+      $('new-sport').addEventListener('click', () => openSportForm('new'));
+      $('sport-cancel').addEventListener('click', () => $('sport-form').classList.add('hidden'));
+      $('sport-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const data = {
+          id: $('sp-id').value.trim().toUpperCase(), name: $('sp-name').value.trim(), kind: $('sp-kind').value,
+          venue: $('sp-venue').value.trim(), note: $('sp-note').value.trim(), active: $('sp-active').checked,
+        };
+        if (sportMode === 'new') data.isNew = true;
+        const before = sportMode === 'edit' ? sport() : null;
+        if (before && before.active !== false && !data.active) {
+          const n = sportEvents().reduce((a, ev) => a + (counts[ev.id] || 0), 0);
+          if (!confirm(`ปิดรับ ${before.name} ทั้งกีฬา? โรงเรียนจะไม่เห็นกีฬานี้` + (n ? `\nมีการแจ้งไว้แล้ว ${n} รายการ (ข้อมูลยังอยู่ เปิดกลับได้)` : ''))) return;
+        }
+        try {
+          await Store.admin.saveSport(data);
+          $('sport-form').classList.add('hidden');
+          await load(data.id);
+          toast(sportMode === 'new' ? `เพิ่ม ${data.name} แล้ว` : `บันทึก ${data.name} แล้ว`);
+          if (sportMode === 'new') openEventForm(null);
+        } catch (ex) { toast(ex.message, 'error'); }
+      });
+
+      // ---------------- รายการแข่งขัน
+      function openEventForm(id) {
+        editingEvent = id ? cat.events.find((e) => e.id === id) : null;
+        const ev = editingEvent || { category: '', gender: 'ชาย', division: '', note: '', active: true };
+        $('event-form-title').textContent = editingEvent ? `แก้ไขรายการ ${editingEvent.id}` : `เพิ่มรายการใน ${sport().name}`;
+        $('ev-category').value = ev.category; $('ev-gender').value = ev.gender;
+        $('ev-division').value = ev.division; $('ev-note').value = ev.note || '';
+        $('ev-active').checked = ev.active !== false;
+        const n = editingEvent ? counts[editingEvent.id] || 0 : 0;
+        $('ev-warning').textContent = n
+          ? `มี ${n} โรงเรียนแจ้งรายการนี้แล้ว ถ้าเปลี่ยนประเภท เพศ หรือรุ่น ความประสงค์เดิมจะย้ายไปเป็นรายการใหม่ตามที่แก้`
+          : '';
+        $('event-form').classList.remove('hidden');
+        $('ev-category').focus();
+      }
+      $('new-event').addEventListener('click', () => openEventForm(null));
+      $('event-cancel').addEventListener('click', () => { $('event-form').classList.add('hidden'); editingEvent = null; });
+      $('event-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const data = {
+          id: editingEvent ? editingEvent.id : undefined, sport_id: $('sport').value,
+          category: $('ev-category').value, gender: $('ev-gender').value, division: $('ev-division').value,
+          note: $('ev-note').value.trim(), active: $('ev-active').checked,
+        };
+        try {
+          const saved = await Store.admin.saveEvent(data);
+          $('event-form').classList.add('hidden');
+          const wasNew = !editingEvent;
+          editingEvent = null;
+          await load();
+          toast(wasNew ? `เพิ่มรายการ ${saved.id} แล้ว` : `บันทึกรายการ ${saved.id} แล้ว`);
+        } catch (ex) { toast(ex.message, 'error'); }
+      });
+
+      $('events').addEventListener('click', async (e) => {
+        const ed = e.target.closest('[data-edit]');
+        const tg = e.target.closest('[data-toggle]');
+        if (ed) openEventForm(ed.dataset.edit);
+        if (tg) {
+          const ev = cat.events.find((x) => x.id === tg.dataset.toggle);
+          const closing = ev.active !== false;
+          const n = counts[ev.id] || 0;
+          if (closing && n && !confirm(`ปิดรับ ${ev.category} ${ev.gender} ${ev.division}?\nมี ${n} โรงเรียนแจ้งไว้แล้ว โรงเรียนจะไม่เห็นรายการนี้ แต่ข้อมูลยังอยู่ และเปิดกลับได้`)) return;
+          try {
+            await Store.admin.saveEvent(Object.assign({}, ev, { active: !closing }));
+            await load();
+            toast(closing ? `ปิดรับ ${ev.id} แล้ว` : `เปิดรับ ${ev.id} แล้ว`);
+          } catch (ex) { toast(ex.message, 'error'); }
+        }
+      });
+
+      try { await load(); } catch (ex) { toast(ex.message, 'error'); }
+    })();
+  </script>
+</body>
+</html>

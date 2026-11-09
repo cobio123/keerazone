@@ -42,6 +42,16 @@ create table if not exists public.events (
   sort     int  not null default 0
 );
 
+-- คอลัมน์ที่เพิ่มภายหลัง (รันซ้ำได้กับฐานข้อมูลเดิม)
+alter table public.sports add column if not exists venue  text    not null default '';
+alter table public.sports add column if not exists note   text    not null default '';
+alter table public.sports add column if not exists active boolean not null default true;
+alter table public.events add column if not exists note   text    not null default '';
+alter table public.events add column if not exists active boolean not null default true;
+-- ปิดรายการแทนการลบ: ถ้าลบรายการ ความประสงค์ของทุกโรงเรียนในรายการนั้นจะหายไปด้วย
+alter table public.events alter column sort type numeric using sort::numeric;
+create unique index if not exists events_unique_combo on public.events (sport_id, category, gender, division);
+
 -- ความประสงค์: มีแถว = โรงเรียนส่ง 1 ทีม/คนในรายการนั้น
 create table if not exists public.intents (
   school_code text not null references public.schools(code) on delete cascade,
@@ -158,7 +168,8 @@ begin
   end if;
   delete from intents where school_code = v_code;
   insert into intents (school_code, event_id)
-    select v_code, e.id from events e where e.id = any(coalesce(p_event_ids, '{}'));
+    select v_code, e.id from events e join sports s on s.id = e.sport_id
+    where e.id = any(coalesce(p_event_ids, '{}')) and e.active and s.active;
   insert into submissions (school_code, updated_at) values (v_code, v_now)
     on conflict (school_code) do update set updated_at = excluded.updated_at;
   return json_build_object('updated_at', v_now,
@@ -215,6 +226,67 @@ begin
     on conflict (school_code) do update set updated_at = excluded.updated_at;
 end $$;
 
+-- เพิ่ม/แก้ชนิดกีฬา (ไม่มีการลบ ใช้ active = false แทน)
+create or replace function public.admin_save_sport(p_sport jsonb)
+returns sports language plpgsql security definer set search_path = public as $$
+declare v_id text := upper(trim(coalesce(p_sport->>'id', ''))); v_row sports;
+begin
+  if not _is_admin() then raise exception 'ไม่มีสิทธิ์ผู้ดูแล' using errcode = '42501'; end if;
+  if v_id !~ '^[A-Z0-9]{2,6}$' then
+    raise exception 'รหัสกีฬาต้องเป็นอักษรอังกฤษหรือตัวเลข 2–6 ตัว เช่น ATH' using errcode = '22023';
+  end if;
+  if coalesce((p_sport->>'isNew')::boolean, false) and exists (select 1 from sports where id = v_id) then
+    raise exception 'มีรหัสกีฬา % อยู่แล้ว', v_id using errcode = '23505';
+  end if;
+  insert into sports (id, name, kind, venue, note, active, sort)
+  values (v_id, coalesce(p_sport->>'name', v_id), coalesce(p_sport->>'kind', ''), coalesce(p_sport->>'venue', ''),
+          coalesce(p_sport->>'note', ''), coalesce((p_sport->>'active')::boolean, true),
+          coalesce((select max(sort) + 1 from sports), 1))
+  on conflict (id) do update set
+    name   = coalesce(p_sport->>'name', sports.name),
+    kind   = coalesce(p_sport->>'kind', sports.kind),
+    venue  = coalesce(p_sport->>'venue', sports.venue),
+    note   = coalesce(p_sport->>'note', sports.note),
+    active = coalesce((p_sport->>'active')::boolean, sports.active)
+  returning * into v_row;
+  return v_row;
+end $$;
+
+-- เพิ่ม/แก้รายการแข่งขัน: ไม่มี id = เพิ่มใหม่ ระบบตั้ง id ต่อจากรายการล่าสุดของกีฬานั้น (เช่น ATH-07)
+create or replace function public.admin_save_event(p_event jsonb)
+returns events language plpgsql security definer set search_path = public as $$
+declare v_id text := nullif(trim(coalesce(p_event->>'id', '')), ''); v_sport text := p_event->>'sport_id'; v_row events;
+begin
+  if not _is_admin() then raise exception 'ไม่มีสิทธิ์ผู้ดูแล' using errcode = '42501'; end if;
+  if v_id is null then
+    if not exists (select 1 from sports where id = v_sport) then
+      raise exception 'ไม่พบชนิดกีฬา %', v_sport using errcode = '22023';
+    end if;
+    select v_sport || '-' || lpad((coalesce(max(nullif(split_part(id, '-', 2), '')::int), 0) + 1)::text, 2, '0')
+      into v_id from events where sport_id = v_sport and split_part(id, '-', 2) ~ '^[0-9]+$';
+    insert into events (id, sport_id, category, gender, division, note, active, sort)
+    values (v_id, v_sport, trim(p_event->>'category'), trim(p_event->>'gender'), trim(p_event->>'division'),
+            coalesce(p_event->>'note', ''), coalesce((p_event->>'active')::boolean, true),
+            coalesce((select max(sort) + 0.01 from events where sport_id = v_sport), 0))
+    returning * into v_row;
+  else
+    update events set
+      category = coalesce(trim(p_event->>'category'), category),
+      gender   = coalesce(trim(p_event->>'gender'), gender),
+      division = coalesce(trim(p_event->>'division'), division),
+      note     = coalesce(p_event->>'note', note),
+      active   = coalesce((p_event->>'active')::boolean, active)
+    where id = v_id
+    returning * into v_row;
+    if v_row.id is null then raise exception 'ไม่พบรายการ %', v_id using errcode = '22023'; end if;
+  end if;
+  return v_row;
+exception when unique_violation then
+  raise exception 'มีรายการนี้อยู่แล้วในกีฬาเดียวกัน' using errcode = '23505';
+end $$;
+
+grant execute on function public.admin_save_sport(jsonb) to authenticated;
+grant execute on function public.admin_save_event(jsonb) to authenticated;
 grant execute on function public.school_login(text, text)               to anon, authenticated;
 grant execute on function public.save_intents(text, text, text[])       to anon, authenticated;
 grant execute on function public.admin_save_settings(timestamptz, timestamptz, text) to authenticated;

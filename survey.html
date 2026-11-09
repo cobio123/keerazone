@@ -51,6 +51,8 @@
         <p class="muted small">ติ๊กรายการที่โรงเรียนจะส่งเข้าแข่งขัน (1 ทีม/คน ต่อรายการ) กดหัวข้อกีฬาเพื่อเปิด–ปิด</p>
 
         <div class="row" style="margin-bottom:12px">
+          <label for="find" class="sr-only">ค้นหารายการ</label>
+          <input type="text" id="find" placeholder="ค้นหารายการ เช่น 100 เมตร, ฟุตซอล" style="max-width:300px">
           <button class="btn ghost small" id="expand-all" type="button">เปิดทุกกีฬา</button>
           <button class="btn ghost small" id="collapse-all" type="button">ปิดทุกกีฬา</button>
         </div>
@@ -71,6 +73,7 @@
   </main>
 
   <script src="assets/js/config.js"></script>
+  <script src="assets/js/catalog.js"></script>
   <script src="assets/js/mockdata.js"></script>
   <script src="assets/js/store.js"></script>
   <script src="assets/js/ui.js"></script>
@@ -142,26 +145,37 @@
 
         const chosen = new Set(res.event_ids || []);
         const bySport = {};
-        catalog.events.forEach((ev) => { (bySport[ev.sport_id] = bySport[ev.sport_id] || []).push(ev); });
+        const openSports = catalog.sports.filter((sp) => sp.active !== false);
+        catalog.events.filter((ev) => ev.active !== false)
+          .forEach((ev) => { (bySport[ev.sport_id] = bySport[ev.sport_id] || []).push(ev); });
 
-        $('sports').innerHTML = catalog.sports.map((sp) => {
-          const evs = bySport[sp.id] || [];
+        $('sports').innerHTML = openSports.filter((sp) => (bySport[sp.id] || []).length).map((sp) => {
+          const evs = bySport[sp.id];
           const groups = {};
           evs.forEach((ev) => {
             const k = ev.category + ' · ' + ev.gender;
             (groups[k] = groups[k] || []).push(ev);
           });
           const n = evs.filter((ev) => chosen.has(ev.id)).length;
+          const info = [sp.venue ? 'สนาม: ' + sp.venue : '', sp.note].filter(Boolean).join(' · ');
           return `<details class="sport" data-sport="${esc(sp.id)}" ${n ? 'open' : ''}>
             <summary><h2 class="sport-title">${esc(sp.name)} <span class="kind">(${esc(sp.kind)})</span></h2>
               <span class="count ${n ? 'on' : ''}">เลือก ${n}/${evs.length}</span></summary>
             <div class="sport-body">
-              ${Object.entries(groups).map(([k, list]) => `
+              ${info ? `<p class="small muted sport-info">${esc(info)}</p>` : ''}
+              ${Object.entries(groups).map(([k, list]) => {
+                const notes = [...new Set(list.map((ev) => ev.note).filter(Boolean))];
+                // หมายเหตุต่างกันตามรุ่น (เช่น น้ำหนักอุปกรณ์) -> แสดงแยกรุ่น
+                const noteText = notes.length === 1 ? notes[0]
+                  : list.filter((ev) => ev.note).map((ev) => `${ev.division}: ${ev.note}`).join(' · ');
+                return `
                 <div class="cat"><h3>${esc(k)}</h3>
+                  ${noteText ? `<p class="small muted cat-note">${esc(noteText)}</p>` : ''}
                   <div class="chips">${list.map((ev) => `
                     <label class="chip"><input type="checkbox" value="${esc(ev.id)}" ${chosen.has(ev.id) ? 'checked' : ''} ${isOpen ? '' : 'disabled'}>
-                      <span>รุ่น ${esc(ev.division)}</span></label>`).join('')}
-                  </div></div>`).join('')}
+                      <span>${esc(ev.division)}</span></label>`).join('')}
+                  </div></div>`;
+              }).join('')}
             </div></details>`;
         }).join('');
 
@@ -185,6 +199,21 @@
       }
 
       $('sports').addEventListener('change', () => { dirty = true; updateCounts(); });
+      // ค้นหา: ซ่อนกลุ่มที่ไม่ตรง และเปิดกีฬาที่มีกลุ่มตรง
+      $('find').addEventListener('input', () => {
+        const q = $('find').value.trim();
+        document.querySelectorAll('.sport').forEach((d) => {
+          const name = d.querySelector('.sport-title').textContent;
+          let any = false;
+          d.querySelectorAll('.cat').forEach((c) => {
+            const hit = !q || name.includes(q) || c.textContent.includes(q);
+            c.classList.toggle('hidden', !hit);
+            any = any || hit;
+          });
+          d.classList.toggle('hidden', !any);
+          if (q && any) d.open = true;
+        });
+      });
       $('expand-all').addEventListener('click', () => document.querySelectorAll('.sport').forEach((d) => { d.open = true; }));
       $('collapse-all').addEventListener('click', () => document.querySelectorAll('.sport').forEach((d) => { d.open = false; }));
 

@@ -63,7 +63,7 @@
   function eventLabel(ev, withSport, sportsById) {
     const parts = [];
     if (withSport && sportsById) parts.push(sportsById[ev.sport_id] ? sportsById[ev.sport_id].name : ev.sport_id);
-    parts.push(ev.category, ev.gender, 'รุ่น ' + ev.division);
+    parts.push(ev.category, ev.gender, ev.division);
     return parts.join(' · ');
   }
 

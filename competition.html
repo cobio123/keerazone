@@ -52,6 +52,7 @@
   </main>
 
   <script src="assets/js/config.js"></script>
+  <script src="assets/js/catalog.js"></script>
   <script src="assets/js/mockdata.js"></script>
   <script src="assets/js/store.js"></script>
   <script src="assets/js/ui.js"></script>
@@ -74,13 +75,16 @@
 
       // ---------------- ตารางแข่งขัน: ใช้กีฬาประเภททีมบางรายการเป็นตัวอย่าง
       const days = ['2026-12-14', '2026-12-15', '2026-12-16', '2026-12-17'];
-      const venues = {
-        football: ['สนามฟุตบอล 1', 'สนามฟุตบอล 2'],
-        futsal: ['โรงยิมฟุตซอล'],
-        volleyball: ['โรงยิม A', 'โรงยิม B'],
-        basketball: ['สนามบาส 1'],
-        takraw: ['สนามตะกร้อ 1', 'สนามตะกร้อ 2'],
-      };
+      // จำนวนสนามสมมติต่อกีฬา ชื่อสถานที่มาจากรายการกีฬา (ร่าง)
+      const courts = { FTB: 2, FTS: 1, VOL: 2, BSK: 1, TAK: 2, HDB: 1 };
+      const venues = {};
+      Object.entries(courts).forEach(([id, nCourts]) => {
+        const sp = sports[id];
+        if (!sp) return;
+        const specific = sp.venue && !/ตาม(ระเบียบ|ประกาศ)/.test(sp.venue);
+        venues[id] = Array.from({ length: nCourts }, (_, i) =>
+          specific ? `${sp.venue}${nCourts > 1 ? ` (สนาม ${i + 1})` : ''}` : `สนาม${sp.name} ${i + 1}`);
+      });
       const sampleEvents = M.events.filter((ev) => venues[ev.sport_id] && (byEvent[ev.id] || []).length >= 3);
       const times = ['08:30', '10:00', '13:00', '14:30', '16:00'];
       const slotUse = {};
@@ -117,18 +121,20 @@
       });
 
       // สมมติว่าแข่งไปแล้ว 2 วันแรก
-      const goals = (sp) => sp === 'volleyball' || sp === 'takraw' ? null : Math.floor(rnd() * 4);
+      const goals = () => Math.floor(rnd() * 4);
       matches.forEach((m) => {
         if (m.day > days[1]) return;
-        if (m.ev.sport_id === 'volleyball' || m.ev.sport_id === 'takraw') {
+        if (m.ev.sport_id === 'VOL' || m.ev.sport_id === 'TAK') {
           const aWin = rnd() < 0.5;
           const lose = Math.floor(rnd() * 2);
           m.score = aWin ? [2, lose] : [lose, 2];
           m.unit = 'เซต';
-        } else if (m.ev.sport_id === 'basketball') {
+        } else if (m.ev.sport_id === 'BSK') {
           m.score = [40 + Math.floor(rnd() * 40), 40 + Math.floor(rnd() * 40)];
+        } else if (m.ev.sport_id === 'HDB') {
+          m.score = [15 + Math.floor(rnd() * 20), 15 + Math.floor(rnd() * 20)];
         } else {
-          m.score = [goals(m.ev.sport_id), goals(m.ev.sport_id)];
+          m.score = [goals(), goals()];
         }
       });
       matches.sort((x, y) => (x.day + x.time + x.venue).localeCompare(y.day + y.time + y.venue));
@@ -156,7 +162,7 @@
                 <span class="team-a">${esc(schools[m.a].name)}</span>
                 <span class="score ${m.score ? '' : 'pending'}">${m.score ? m.score.join(' – ') : 'vs'}</span>
                 <span class="team-b">${esc(schools[m.b].name)}</span>
-                <span class="meta">${esc(sports[m.ev.sport_id].name)} ${esc(m.ev.category)} ${esc(m.ev.gender)} รุ่น ${esc(m.ev.division)} · สาย ${m.group} · ${esc(m.venue)}${m.unit ? ' · ผลเป็น' + m.unit : ''}</span>
+                <span class="meta">${esc(sports[m.ev.sport_id].name)} ${esc(m.ev.category)} ${esc(m.ev.gender)} ${esc(m.ev.division)} · สาย ${m.group} · ${esc(m.venue)}${m.unit ? ' · ผลเป็น' + m.unit : ''}</span>
               </div>`).join('')}
           </div>`).join('') || '<p class="muted">ไม่มีนัดแข่งในตัวกรองนี้</p>';
       }
