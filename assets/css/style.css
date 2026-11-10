@@ -288,7 +288,10 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .form-grid thead th:first-child { text-align: left; }
 .form-grid tbody th { text-align: left; font-weight: 500; padding: 8px 12px; min-width: 150px; }
 .form-grid tbody th .g { color: var(--muted); font-weight: 400; }
-.form-grid .row-note { display: block; font-weight: 400; font-size: 0.8rem; color: var(--muted); margin-top: 2px; max-width: 34ch; }
+.form-grid tbody th { white-space: normal; } /* ให้หมายเหตุตัดบรรทัดในกรอบ ไม่ล้นทับช่องติ๊ก */
+.form-grid .row-note { display: block; font-weight: 400; font-size: 0.8rem; color: var(--muted); margin-top: 2px; max-width: 34ch; overflow-wrap: anywhere; }
+.form-grid .cell-note { display: block; font-size: 0.75rem; line-height: 1.2; color: var(--muted); margin-top: 4px; white-space: normal; }
+.tick:has(.cell-note) { padding: 8px 2px; align-content: center; }
 .form-grid td { text-align: center; width: 76px; }
 .form-grid td.na { color: var(--muted); background: var(--surface-2); }
 .tick { position: relative; display: grid; place-items: center; width: 100%; min-height: 44px; cursor: pointer; margin: 0; }
