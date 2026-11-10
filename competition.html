@@ -6,7 +6,7 @@
   <title>ต้นแบบจัดการแข่งขัน</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600&family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
@@ -33,7 +33,7 @@
       </section>
 
       <section id="tab-medals" class="hidden">
-        <div class="grid grid-4" id="medal-stats" style="margin-bottom:16px"></div>
+        <div class="status-line" id="medal-stats" style="margin-bottom:16px"></div>
         <div class="table-wrap">
           <table>
             <thead><tr>
@@ -194,9 +194,10 @@
           <td class="num">${r.g}</td><td class="num">${r.s}</td><td class="num">${r.b}</td><td class="num"><strong>${r.total}</strong></td></tr>`;
       }).join('');
       const sum = (k) => rows.reduce((a, r) => a + r[k], 0);
-      $('medal-stats').innerHTML = [
-        [medalEvents, 'รายการที่ชิงเหรียญ'], [sum('g'), 'เหรียญทอง'], [sum('s'), 'เหรียญเงิน'], [sum('b'), 'เหรียญทองแดง'],
-      ].map(([n, l]) => `<div class="card stat"><div class="num">${n}</div><div class="lbl">${l}</div></div>`).join('');
+      $('medal-stats').innerHTML = `<strong>ชิงเหรียญ ${medalEvents} รายการ</strong>
+        <span><span class="medal g" aria-hidden="true"></span>ทอง ${sum('g')}</span>
+        <span><span class="medal s" aria-hidden="true"></span>เงิน ${sum('s')}</span>
+        <span><span class="medal b" aria-hidden="true"></span>ทองแดง ${sum('b')}</span>`;
 
       // ---------------- แท็บ
       document.querySelectorAll('.tabs button').forEach((b) => b.addEventListener('click', () => {

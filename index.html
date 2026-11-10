@@ -6,49 +6,90 @@
   <title>ระบบกีฬานักเรียนชัยภูมิ ครั้งที่ 51</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600&family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-  <main>
+  <main class="home">
+    <section class="hero" aria-labelledby="title">
+      <svg class="hero-art" viewBox="0 0 1440 300" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">
+        <path class="ridge-far" d="M0 170 L90 140 L170 158 L260 96 L350 134 L430 112 L520 150 L610 82 L700 128 L790 104 L880 140 L980 70 L1080 122 L1170 96 L1260 132 L1350 100 L1440 124 V300 H0Z"/>
+        <path class="ridge-mid" d="M0 204 Q160 150 300 184 T600 170 Q760 128 900 178 T1200 162 Q1330 150 1440 182 V300 H0Z"/>
+        <path class="ridge-near" d="M0 248 Q360 212 720 238 T1440 228 V300 H0Z"/>
+        <path class="track" d="M-40 262 C420 168 900 232 1480 160 L1480 244 C900 316 420 252 -40 346 Z"/>
+        <g class="lanes" fill="none">
+          <path d="M-40 262 C420 168 900 232 1480 160"/>
+          <path d="M-40 274 C420 180 900 244 1480 172"/>
+          <path d="M-40 286 C420 192 900 256 1480 184"/>
+          <path d="M-40 298 C420 204 900 268 1480 196"/>
+          <path d="M-40 310 C420 216 900 280 1480 208"/>
+          <path d="M-40 322 C420 228 900 292 1480 220"/>
+          <path d="M-40 334 C420 240 900 304 1480 232"/>
+          <path d="M-40 346 C420 252 900 316 1480 244"/>
+        </g>
+        <g class="lane-no">
+          <text x="1290" y="186.9">1</text><text x="1290" y="198.9">2</text><text x="1290" y="210.9">3</text><text x="1290" y="222.9">4</text><text x="1290" y="234.9">5</text><text x="1290" y="246.9">6</text><text x="1290" y="258.9">7</text>
+        </g>
+      </svg>
+      <div class="wrap hero-inner">
+        <h1 id="title"><span class="hero-name">โซนหุบเขา</span> <span class="hero-no">ครั้งที่ 51</span></h1>
+        <p class="hero-sub">กีฬานักเรียนมัธยมศึกษาจังหวัดชัยภูมิ ปีการศึกษา 2569
+          <br>ระบบแจ้งความประสงค์ส่งกีฬา สำหรับวางแผนแบ่งสายก่อนการแข่งขัน</p>
+        <div class="row hero-actions">
+          <a class="btn hero-primary" href="survey.html">แจ้งความประสงค์</a>
+          <a class="btn hero-secondary" href="summary.html">ดูสรุปทุกรายการ</a>
+        </div>
+        <div class="hero-status">
+          <div class="status-line" id="status"></div>
+          <div class="progress" id="progress" role="img"><span style="width:0"></span></div>
+        </div>
+      </div>
+    </section>
+
     <div class="wrap">
-      <div class="page-head">
-        <h1 id="title">ระบบสำรวจความประสงค์เข้าร่วมการแข่งขันกีฬา</h1>
-        <p>แต่ละโรงเรียนแจ้งล่วงหน้าว่าจะส่งกีฬาอะไร ประเภทไหน รุ่นอายุใด เพื่อให้ฝ่ายจัดการแข่งขันนำไปแบ่งสายแบบคร่าวๆ
-           ระยะนี้ยังไม่ส่งรายชื่อนักกีฬา จึงเปลี่ยนตัวผู้เล่นหน้างานได้ตามปกติโดยไม่ต้องแก้ในระบบ</p>
-      </div>
+      <section class="section" aria-labelledby="sports-h">
+        <div class="row between" style="align-items:baseline">
+          <h2 id="sports-h">ชนิดกีฬาที่เปิดรับ</h2>
+          <p class="small muted" style="margin:0">กดชื่อกีฬาเพื่อดูว่าโรงเรียนใดแจ้งรายการไหน</p>
+        </div>
+        <ol class="roster" id="roster"></ol>
+      </section>
 
-      <div class="grid grid-4" id="stats"></div>
-
-      <h2 style="margin-top:28px">เลือกเมนู</h2>
-      <div class="grid grid-2">
-        <a class="card tile" href="survey.html">
-          <h3>แจ้งความประสงค์ (สำหรับโรงเรียน)</h3>
-          <p class="muted">เข้าด้วยรหัสโรงเรียน + PIN 6 หลัก ติ๊กรายการที่จะส่ง แก้ไขได้จนถึงวันปิดรับ</p>
-        </a>
-        <a class="card tile" href="summary.html">
-          <h3>สรุปความประสงค์ (สาธารณะ)</h3>
-          <p class="muted">จำนวนโรงเรียนต่อรายการ ประมาณการจำนวนสาย และส่งออกเป็นไฟล์ Excel</p>
-        </a>
-        <a class="card tile" href="competition.html">
-          <h3>ต้นแบบระบบจัดการแข่งขัน</h3>
-          <p class="muted">ตารางการแข่งขันและตารางเหรียญรวม เพื่อให้ที่ประชุมเห็นภาพระยะต่อไป ใช้ข้อมูลสมมติทั้งหมด</p>
-        </a>
-        <a class="card tile" href="admin.html">
-          <h3>ผู้ดูแลระบบ (สำหรับฝ่ายจัด)</h3>
-          <p class="muted">ตั้งวันเปิด–ปิดรับ ออก PIN ให้โรงเรียน ติดตามว่าใครส่งแล้ว</p>
-        </a>
-      </div>
-
-      <div class="card" style="margin-top:24px">
-        <h2>ทำไมใช้ระบบนี้</h2>
-        <ul>
-          <li>ไม่มีค่าใช้จ่าย: หน้าเว็บอยู่บน GitHub Pages ฐานข้อมูลบน Supabase แผนฟรี</li>
-          <li>ไม่ต้องล็อกอิน Gmail: เปิดได้ทุกเครื่อง ทุกเบราว์เซอร์ รวมถึงมือถือ</li>
-          <li>ผูกกับ “ทีมของโรงเรียน” ไม่ใช่ตัวบุคคล: เปลี่ยนนักกีฬาหน้างานได้โดยไม่กระทบระบบ</li>
-          <li>ต่อยอดได้: ข้อมูลรายการแข่งขันชุดเดียวกันใช้ทำตารางแข่ง บันทึกผล และตารางเหรียญในระยะต่อไป</li>
+      <section class="section" aria-labelledby="menu-h">
+        <h2 id="menu-h">เข้าใช้งาน</h2>
+        <ul class="menu-list">
+          <li><a href="survey.html">
+            <span class="menu-who">ครูผู้ประสานงานโรงเรียน</span>
+            <span class="menu-title">แจ้งความประสงค์</span>
+            <span class="menu-desc">เข้าด้วยรหัสโรงเรียนและ PIN 6 หลัก ติ๊กรายการที่จะส่ง แก้ไขได้จนถึงวันปิดรับ</span>
+          </a></li>
+          <li><a href="summary.html">
+            <span class="menu-who">ทุกคน</span>
+            <span class="menu-title">สรุปความประสงค์</span>
+            <span class="menu-desc">จำนวนโรงเรียนในแต่ละรายการ ประมาณการจำนวนสาย และส่งออกเป็นไฟล์ Excel</span>
+          </a></li>
+          <li><a href="admin.html">
+            <span class="menu-who">ฝ่ายจัดการแข่งขัน</span>
+            <span class="menu-title">ผู้ดูแลระบบ</span>
+            <span class="menu-desc">ตั้งวันเปิด–ปิดรับ ออก PIN จัดการรายการแข่งขัน และติดตามว่าโรงเรียนใดแจ้งแล้ว</span>
+          </a></li>
+          <li><a href="competition.html">
+            <span class="menu-who">คณะกรรมการ</span>
+            <span class="menu-title">ต้นแบบระบบจัดการแข่งขัน</span>
+            <span class="menu-desc">ตัวอย่างตารางการแข่งขันและตารางเหรียญรวมของระยะต่อไป ใช้ข้อมูลสมมติทั้งหมด</span>
+          </a></li>
         </ul>
-      </div>
+      </section>
+
+      <section class="section" aria-labelledby="why-h">
+        <h2 id="why-h">หลักการของระบบ</h2>
+        <dl class="principles">
+          <div><dt>ไม่มีค่าใช้จ่าย</dt><dd>หน้าเว็บอยู่บน GitHub Pages ฐานข้อมูลบน Supabase แผนฟรี</dd></div>
+          <div><dt>ไม่ต้องใช้บัญชี Gmail</dt><dd>เปิดได้ทุกเครื่องและทุกเบราว์เซอร์ รวมถึงมือถือ</dd></div>
+          <div><dt>ผูกกับทีม ไม่ผูกกับตัวบุคคล</dt><dd>เปลี่ยนนักกีฬาหน้างานได้โดยไม่ต้องแก้ในระบบ</dd></div>
+          <div><dt>ต่อยอดได้</dt><dd>รายการแข่งขันชุดเดียวกันใช้ทำตารางแข่ง บันทึกผล และตารางเหรียญในระยะต่อไป</dd></div>
+        </dl>
+      </section>
     </div>
   </main>
 
@@ -63,17 +104,35 @@
       try {
         const [cat, data, settings] = await Promise.all([Store.catalog(), Store.intents(), Store.settings()]);
         const submitted = data.submissions.length;
+        const total = cat.schools.length;
         const open = Store.isOpen(settings);
-        const stats = [
-          [cat.schools.length, 'โรงเรียนทั้งหมด'],
-          [submitted, 'โรงเรียนแจ้งแล้ว'],
-          [cat.events.length, 'รายการแข่งขัน'],
-          [open ? 'เปิดรับ' : 'ปิดรับ', settings.close_at ? 'ปิดรับ ' + UI.thaiDateTime(settings.close_at, false) : 'สถานะระบบ'],
-        ];
-        document.getElementById('stats').innerHTML = stats.map(([n, l]) =>
-          `<div class="card stat"><div class="num">${esc(n)}</div><div class="lbl">${esc(l)}</div></div>`).join('');
+        const events = cat.events.filter((e) => e.active !== false).length;
+        const sports = cat.sports.filter((s) => s.active !== false).length;
+        const closeText = settings.close_at ? `ปิดรับ ${UI.thaiDateTime(settings.close_at, false)}` : '';
+        document.getElementById('status').innerHTML = `
+          <strong>${open ? 'ขณะนี้เปิดรับ' : 'ขณะนี้ปิดรับ'}</strong>
+          <span>โรงเรียนแจ้งแล้ว ${submitted} จาก ${total} โรง</span>
+          <span class="muted">${events} รายการ ใน ${sports} ชนิดกีฬา</span>
+          ${closeText ? `<span class="muted">${esc(closeText)}</span>` : ''}`;
+        // สูจิบัตรชนิดกีฬา: รหัส ชื่อ จำนวนรายการ และจำนวนที่โรงเรียนแจ้ง
+        const openEvents = cat.events.filter((e) => e.active !== false);
+        const evSport = {};
+        openEvents.forEach((e) => { evSport[e.id] = e.sport_id; });
+        const perSport = {};
+        data.intents.forEach((r) => { const sp = evSport[r.event_id]; if (sp) perSport[sp] = (perSport[sp] || 0) + 1; });
+        document.getElementById('roster').innerHTML = cat.sports.filter((sp) => sp.active !== false).map((sp) => {
+          const n = openEvents.filter((e) => e.sport_id === sp.id).length;
+          return `<li><a href="summary.html?sport=${encodeURIComponent(sp.id)}">
+            <span class="r-code">${esc(sp.id)}</span>
+            <span class="r-name">${esc(sp.name)}</span>
+            <span class="r-meta"><span>${n} รายการ</span><span>แจ้งแล้ว ${perSport[sp.id] || 0}</span></span>
+          </a></li>`;
+        }).join('');
+        const bar = document.getElementById('progress');
+        bar.firstElementChild.style.width = (total ? (submitted / total) * 100 : 0) + '%';
+        bar.setAttribute('aria-label', `โรงเรียนแจ้งแล้ว ${submitted} จาก ${total} โรง`);
       } catch (e) {
-        document.getElementById('stats').innerHTML = `<div class="error">${esc(e.message)}</div>`;
+        document.getElementById('status').innerHTML = `<div class="error">${esc(e.message)}</div>`;
       }
     })();
   </script>

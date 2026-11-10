@@ -6,7 +6,7 @@
   <title>แจ้งความประสงค์ส่งกีฬา</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600&family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
@@ -82,6 +82,8 @@
       const { esc, toast, thaiDateTime } = UI;
       const SESSION = 'keerazone_school_session';
       const $ = (id) => document.getElementById(id);
+      // หัวคอลัมน์รุ่น: บนมือถือซ่อนคำว่า 'ไม่เกิน' ให้ตารางพอดีจอ
+      const divLabel = (d) => (d.startsWith('ไม่เกิน ') ? `<span class="pre">ไม่เกิน </span>${esc(d.slice(8))}` : esc(d));
       let catalog, session, dirty = false, isOpen = true;
 
       try {
@@ -128,7 +130,7 @@
         $('login-view').classList.add('hidden');
         $('form-view').classList.remove('hidden');
         $('school-name').textContent = res.school.name;
-        $('school-meta').textContent = `รหัส ${res.school.code} · อำเภอ${res.school.district}`;
+        $('school-meta').textContent = `รหัส ${res.school.code}  อำเภอ${res.school.district}`;
         $('saved-at').textContent = res.updated_at ? 'บันทึกล่าสุด ' + thaiDateTime(res.updated_at) : 'ยังไม่เคยบันทึก';
 
         Store.settings().then((s) => {
@@ -151,31 +153,42 @@
 
         $('sports').innerHTML = openSports.filter((sp) => (bySport[sp.id] || []).length).map((sp) => {
           const evs = bySport[sp.id];
-          const groups = {};
+          // ใบตอบรับ: แถว = ประเภท·เพศ, คอลัมน์ = รุ่น (ตามลำดับที่พบ)
+          const divisions = [...new Set(evs.map((ev) => ev.division))];
+          const rows = [];
+          const rowOf = {};
           evs.forEach((ev) => {
-            const k = ev.category + ' · ' + ev.gender;
-            (groups[k] = groups[k] || []).push(ev);
+            const k = ev.category + '\u0000' + ev.gender;
+            if (!rowOf[k]) { rowOf[k] = { category: ev.category, gender: ev.gender, cells: {} }; rows.push(rowOf[k]); }
+            rowOf[k].cells[ev.division] = ev;
           });
           const n = evs.filter((ev) => chosen.has(ev.id)).length;
-          const info = [sp.venue ? 'สนาม: ' + sp.venue : '', sp.note].filter(Boolean).join(' · ');
+          const info = [sp.venue ? 'สนาม: ' + sp.venue : '', sp.note].filter(Boolean);
+          const rowNote = (r) => {
+            const list = divisions.map((d) => r.cells[d]).filter((ev) => ev && ev.note);
+            const notes = [...new Set(list.map((ev) => ev.note))];
+            if (!notes.length) return '';
+            return notes.length === 1 ? notes[0] : list.map((ev) => `${ev.division.replace('ไม่เกิน ', '')}: ${ev.note}`).join(' / ');
+          };
           return `<details class="sport" data-sport="${esc(sp.id)}" ${n ? 'open' : ''}>
-            <summary><h2 class="sport-title">${esc(sp.name)} <span class="kind">(${esc(sp.kind)})</span></h2>
-              <span class="count ${n ? 'on' : ''}">เลือก ${n}/${evs.length}</span></summary>
+            <summary><h2 class="sport-title">${esc(sp.name)} <span class="kind">${esc(sp.kind)}</span></h2>
+              <span class="count ${n ? 'on' : ''}">เลือก ${n} จาก ${evs.length}</span></summary>
             <div class="sport-body">
-              ${info ? `<p class="small muted sport-info">${esc(info)}</p>` : ''}
-              ${Object.entries(groups).map(([k, list]) => {
-                const notes = [...new Set(list.map((ev) => ev.note).filter(Boolean))];
-                // หมายเหตุต่างกันตามรุ่น (เช่น น้ำหนักอุปกรณ์) -> แสดงแยกรุ่น
-                const noteText = notes.length === 1 ? notes[0]
-                  : list.filter((ev) => ev.note).map((ev) => `${ev.division}: ${ev.note}`).join(' · ');
-                return `
-                <div class="cat"><h3>${esc(k)}</h3>
-                  ${noteText ? `<p class="small muted cat-note">${esc(noteText)}</p>` : ''}
-                  <div class="chips">${list.map((ev) => `
-                    <label class="chip"><input type="checkbox" value="${esc(ev.id)}" ${chosen.has(ev.id) ? 'checked' : ''} ${isOpen ? '' : 'disabled'}>
-                      <span>${esc(ev.division)}</span></label>`).join('')}
-                  </div></div>`;
-              }).join('')}
+              ${info.map((t) => `<p class="small muted sport-info">${esc(t)}</p>`).join('')}
+              <div class="grid-scroll"><table class="form-grid">
+                <thead><tr><th scope="col">ประเภท</th>${divisions.map((d) => `<th scope="col">${divLabel(d)}</th>`).join('')}</tr></thead>
+                <tbody>${rows.map((r) => {
+                  const note = rowNote(r);
+                  return `<tr><th scope="row">${esc(r.category)} <span class="g">${esc(r.gender)}</span>
+                      ${note ? `<span class="row-note">${esc(note)}</span>` : ''}</th>
+                    ${divisions.map((d) => {
+                      const ev = r.cells[d];
+                      if (!ev) return '<td class="na" aria-label="ไม่มีรุ่นนี้">–</td>';
+                      return `<td><label class="tick"><input type="checkbox" value="${esc(ev.id)}" ${chosen.has(ev.id) ? 'checked' : ''} ${isOpen ? '' : 'disabled'}
+                        aria-label="${esc(sp.name + ' ' + ev.category + ' ' + ev.gender + ' ' + ev.division)}"><span></span></label></td>`;
+                    }).join('')}</tr>`;
+                }).join('')}</tbody>
+              </table></div>
             </div></details>`;
         }).join('');
 
@@ -192,22 +205,22 @@
           const all = d.querySelectorAll('input').length;
           const on = d.querySelectorAll('input:checked').length;
           const c = d.querySelector('.count');
-          c.textContent = `เลือก ${on}/${all}`;
+          c.textContent = `เลือก ${on} จาก ${all}`;
           c.classList.toggle('on', on > 0);
         });
         $('sel-count').textContent = selectedIds().length;
       }
 
       $('sports').addEventListener('change', () => { dirty = true; updateCounts(); });
-      // ค้นหา: ซ่อนกลุ่มที่ไม่ตรง และเปิดกีฬาที่มีกลุ่มตรง
+      // ค้นหา: ซ่อนแถวที่ไม่ตรง และเปิดกีฬาที่มีแถวตรง
       $('find').addEventListener('input', () => {
         const q = $('find').value.trim();
         document.querySelectorAll('.sport').forEach((d) => {
           const name = d.querySelector('.sport-title').textContent;
           let any = false;
-          d.querySelectorAll('.cat').forEach((c) => {
-            const hit = !q || name.includes(q) || c.textContent.includes(q);
-            c.classList.toggle('hidden', !hit);
+          d.querySelectorAll('tbody tr').forEach((tr) => {
+            const hit = !q || name.includes(q) || tr.textContent.includes(q);
+            tr.classList.toggle('hidden', !hit);
             any = any || hit;
           });
           d.classList.toggle('hidden', !any);
