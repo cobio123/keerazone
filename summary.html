@@ -188,7 +188,10 @@
           ${list.length ? `<p class="small" style="margin:6px 0 0">${list.map(esc).join(', ')}</p>` : ''}`;
       });
       $('f-sport').addEventListener('change', renderMatrix);
+      const want = new URLSearchParams(location.search).get('sport');
+      if (want && cat.sports.some((sp) => sp.id === want)) $('f-sport').value = want;
       renderMatrix();
+      if (want) document.getElementById('matrix-h').scrollIntoView();
 
       // ตารางรายโรงเรียน
       function renderSchools() {

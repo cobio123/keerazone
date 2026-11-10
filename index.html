@@ -10,15 +10,50 @@
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-  <main>
-    <div class="wrap">
-      <div class="page-head">
-        <h1 id="title">แจ้งความประสงค์ส่งกีฬา โซนหุบเขา ครั้งที่ 51</h1>
-        <p>โรงเรียนแจ้งล่วงหน้าว่าจะส่งกีฬาใด ประเภทใด รุ่นอายุใด เพื่อให้ฝ่ายจัดการแข่งขันแบ่งสายแบบคร่าวๆ
-           ระยะนี้ยังไม่ส่งรายชื่อนักกีฬา เปลี่ยนตัวผู้เล่นหน้างานได้ตามปกติ</p>
-        <div class="status-line" id="status"></div>
-        <div class="progress" id="progress" role="img"><span style="width:0"></span></div>
+  <main class="home">
+    <section class="hero" aria-labelledby="title">
+      <svg class="hero-art" viewBox="0 0 1440 300" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">
+        <path class="ridge-far" d="M0 170 L90 140 L170 158 L260 96 L350 134 L430 112 L520 150 L610 82 L700 128 L790 104 L880 140 L980 70 L1080 122 L1170 96 L1260 132 L1350 100 L1440 124 V300 H0Z"/>
+        <path class="ridge-mid" d="M0 204 Q160 150 300 184 T600 170 Q760 128 900 178 T1200 162 Q1330 150 1440 182 V300 H0Z"/>
+        <path class="ridge-near" d="M0 248 Q360 212 720 238 T1440 228 V300 H0Z"/>
+        <path class="track" d="M-40 262 C420 168 900 232 1480 160 L1480 244 C900 316 420 252 -40 346 Z"/>
+        <g class="lanes" fill="none">
+          <path d="M-40 262 C420 168 900 232 1480 160"/>
+          <path d="M-40 274 C420 180 900 244 1480 172"/>
+          <path d="M-40 286 C420 192 900 256 1480 184"/>
+          <path d="M-40 298 C420 204 900 268 1480 196"/>
+          <path d="M-40 310 C420 216 900 280 1480 208"/>
+          <path d="M-40 322 C420 228 900 292 1480 220"/>
+          <path d="M-40 334 C420 240 900 304 1480 232"/>
+          <path d="M-40 346 C420 252 900 316 1480 244"/>
+        </g>
+        <g class="lane-no">
+          <text x="1290" y="186.9">1</text><text x="1290" y="198.9">2</text><text x="1290" y="210.9">3</text><text x="1290" y="222.9">4</text><text x="1290" y="234.9">5</text><text x="1290" y="246.9">6</text><text x="1290" y="258.9">7</text>
+        </g>
+      </svg>
+      <div class="wrap hero-inner">
+        <h1 id="title"><span class="hero-name">โซนหุบเขา</span> <span class="hero-no">ครั้งที่ 51</span></h1>
+        <p class="hero-sub">กีฬานักเรียนมัธยมศึกษาจังหวัดชัยภูมิ ปีการศึกษา 2569
+          <br>ระบบแจ้งความประสงค์ส่งกีฬา สำหรับวางแผนแบ่งสายก่อนการแข่งขัน</p>
+        <div class="row hero-actions">
+          <a class="btn hero-primary" href="survey.html">แจ้งความประสงค์</a>
+          <a class="btn hero-secondary" href="summary.html">ดูสรุปทุกรายการ</a>
+        </div>
+        <div class="hero-status">
+          <div class="status-line" id="status"></div>
+          <div class="progress" id="progress" role="img"><span style="width:0"></span></div>
+        </div>
       </div>
+    </section>
+
+    <div class="wrap">
+      <section class="section" aria-labelledby="sports-h">
+        <div class="row between" style="align-items:baseline">
+          <h2 id="sports-h">ชนิดกีฬาที่เปิดรับ</h2>
+          <p class="small muted" style="margin:0">กดชื่อกีฬาเพื่อดูว่าโรงเรียนใดแจ้งรายการไหน</p>
+        </div>
+        <ol class="roster" id="roster"></ol>
+      </section>
 
       <section class="section" aria-labelledby="menu-h">
         <h2 id="menu-h">เข้าใช้งาน</h2>
@@ -79,6 +114,20 @@
           <span>โรงเรียนแจ้งแล้ว ${submitted} จาก ${total} โรง</span>
           <span class="muted">${events} รายการ ใน ${sports} ชนิดกีฬา</span>
           ${closeText ? `<span class="muted">${esc(closeText)}</span>` : ''}`;
+        // สูจิบัตรชนิดกีฬา: รหัส ชื่อ จำนวนรายการ และจำนวนที่โรงเรียนแจ้ง
+        const openEvents = cat.events.filter((e) => e.active !== false);
+        const evSport = {};
+        openEvents.forEach((e) => { evSport[e.id] = e.sport_id; });
+        const perSport = {};
+        data.intents.forEach((r) => { const sp = evSport[r.event_id]; if (sp) perSport[sp] = (perSport[sp] || 0) + 1; });
+        document.getElementById('roster').innerHTML = cat.sports.filter((sp) => sp.active !== false).map((sp) => {
+          const n = openEvents.filter((e) => e.sport_id === sp.id).length;
+          return `<li><a href="summary.html?sport=${encodeURIComponent(sp.id)}">
+            <span class="r-code">${esc(sp.id)}</span>
+            <span class="r-name">${esc(sp.name)}</span>
+            <span class="r-meta"><span>${n} รายการ</span><span>แจ้งแล้ว ${perSport[sp.id] || 0}</span></span>
+          </a></li>`;
+        }).join('');
         const bar = document.getElementById('progress');
         bar.firstElementChild.style.width = (total ? (submitted / total) * 100 : 0) + '%';
         bar.setAttribute('aria-label', `โรงเรียนแจ้งแล้ว ${submitted} จาก ${total} โรง`);

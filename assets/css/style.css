@@ -154,6 +154,62 @@ a { color: var(--valley); text-underline-offset: 3px; }
 .progress > span { display: block; height: 100%; background: var(--valley); }
 @media (prefers-color-scheme: dark) { .progress > span { background: var(--heat-5); } }
 
+/* ---------- หน้าแรก: หุบเขาและลู่วิ่ง ---------- */
+main.home { padding-top: 0; }
+main.home .section:first-of-type { padding-top: 32px; }
+.hero {
+  --ridge-far: #2b6249; --ridge-mid: #24563f; --ridge-near: #1a4433; --track: #7d2a4a;
+  --hero-accent: #f4b6cf;
+  position: relative; overflow: hidden; background: var(--valley); color: var(--valley-ink);
+  padding: 56px 0 236px; margin-bottom: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  .hero { --ridge-far: #163626; --ridge-mid: #122e21; --ridge-near: #0b1f16; --track: #5c2038; }
+}
+.hero-art { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 300px; }
+.hero-art .ridge-far { fill: var(--ridge-far); }
+.hero-art .ridge-mid { fill: var(--ridge-mid); }
+.hero-art .ridge-near { fill: var(--ridge-near); }
+.hero-art .track { fill: var(--track); }
+.hero-art .lanes path { stroke: rgba(255, 255, 255, 0.75); stroke-width: 1.4; }
+.hero-art .lane-no text { fill: rgba(255, 255, 255, 0.85); font-family: var(--font-head); font-size: 9px; text-anchor: middle; }
+.hero-inner { position: relative; }
+.hero h1 { font-weight: 600; line-height: 1.05; margin: 0 0 16px; letter-spacing: -0.02em; }
+.hero-name { display: block; font-size: clamp(2.8rem, 8vw, 5.2rem); }
+.hero-no { display: block; font-size: clamp(1.6rem, 4.2vw, 2.6rem); font-weight: 500; color: var(--hero-accent); letter-spacing: -0.01em; }
+.hero-sub { color: var(--valley-sub); font-size: 1.05rem; max-width: 52ch; margin-bottom: 20px; }
+.hero-actions { margin-bottom: 24px; }
+.hero .btn.hero-primary { background: var(--krachiao); border-color: var(--krachiao); color: #fff; font-size: 1.05rem; padding: 12px 22px; }
+.hero .btn.hero-secondary { background: transparent; border-color: var(--valley-sub); color: var(--valley-ink); font-weight: 500; }
+@media (prefers-color-scheme: dark) { .hero .btn.hero-primary { color: var(--krachiao-ink); } }
+.hero a:focus-visible { outline-color: var(--valley-ink); }
+.hero-status { max-width: 560px; }
+.hero-status .status-line { color: var(--valley-sub); }
+.hero-status .status-line strong { color: var(--valley-ink); }
+.hero-status .muted { color: var(--valley-sub); }
+.hero-status .progress { background: rgba(255, 255, 255, 0.18); }
+.hero-status .progress > span { background: var(--hero-accent); }
+@media (max-width: 640px) {
+  .hero { padding: 36px 0 150px; }
+  .hero-art { height: 190px; }
+}
+
+/* สูจิบัตรชนิดกีฬา */
+.roster { list-style: none; margin: 12px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); column-gap: 32px; }
+.roster li { border-top: 1px solid var(--rule); }
+.roster a { display: grid; grid-template-columns: 52px 1fr; gap: 0 12px; padding: 12px 2px; text-decoration: none; color: var(--ink); }
+.roster .r-code { grid-row: span 2; font-family: var(--font-head); font-weight: 500; font-size: 0.95rem; color: var(--krachiao-text); padding-top: 2px; }
+.roster .r-name { font-family: var(--font-head); font-weight: 500; font-size: 1.1rem; line-height: 1.3; }
+.roster .r-meta { display: flex; gap: 12px; font-size: 0.85rem; color: var(--muted); }
+@media (max-width: 640px) {
+  .roster { grid-template-columns: 1fr 1fr; column-gap: 16px; }
+  .roster a { grid-template-columns: 1fr; padding: 10px 2px; }
+  .roster .r-code { grid-row: auto; font-size: 0.8rem; padding: 0; }
+  .roster .r-name { font-size: 1rem; }
+  .roster .r-meta { flex-direction: column; gap: 0; font-size: 0.8rem; }
+}
+.roster a:hover .r-name { text-decoration: underline; text-decoration-color: var(--krachiao); text-underline-offset: 4px; }
+
 /* เมนูหน้าแรก: รายการตามบทบาท ไม่ใช่การ์ดเท่ากัน */
 .menu-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
 .menu-list li { border-bottom: 1px solid var(--rule); }
