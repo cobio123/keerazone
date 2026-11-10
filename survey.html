@@ -164,11 +164,18 @@
           });
           const n = evs.filter((ev) => chosen.has(ev.id)).length;
           const info = [sp.venue ? 'สนาม: ' + sp.venue : '', sp.note].filter(Boolean);
-          const rowNote = (r) => {
+          // หมายเหตุของแถว: ถ้าทุกรุ่นเหมือนกัน แสดงใต้ชื่อรายการ
+          // ถ้าต่างกันตามรุ่น (เช่น น้ำหนักอุปกรณ์) แยกส่วนที่เหมือนกันไว้ใต้ชื่อ และค่าของแต่ละรุ่นไว้ในช่องของรุ่นนั้น
+          const rowNotes = (r) => {
             const list = divisions.map((d) => r.cells[d]).filter((ev) => ev && ev.note);
             const notes = [...new Set(list.map((ev) => ev.note))];
-            if (!notes.length) return '';
-            return notes.length === 1 ? notes[0] : list.map((ev) => `${ev.division.replace('ไม่เกิน ', '')}: ${ev.note}`).join(' / ');
+            if (!notes.length) return { row: '', cell: {} };
+            if (notes.length === 1) return { row: notes[0], cell: {} };
+            let prefix = notes.reduce((a, b) => { let i = 0; while (i < a.length && a[i] === b[i]) i++; return a.slice(0, i); });
+            prefix = prefix.slice(0, prefix.lastIndexOf(' ') + 1); // ตัดที่ช่องว่าง ไม่ตัดกลางคำ
+            const cell = {};
+            list.forEach((ev) => { cell[ev.division] = ev.note.slice(prefix.length).trim(); });
+            return { row: prefix.trim() ? prefix.trim() + ' (ดูในช่องแต่ละรุ่น)' : '', cell };
           };
           return `<details class="sport" data-sport="${esc(sp.id)}" ${n ? 'open' : ''}>
             <summary><h2 class="sport-title">${esc(sp.name)} <span class="kind">${esc(sp.kind)}</span></h2>
@@ -178,14 +185,14 @@
               <div class="grid-scroll"><table class="form-grid">
                 <thead><tr><th scope="col">ประเภท</th>${divisions.map((d) => `<th scope="col">${divLabel(d)}</th>`).join('')}</tr></thead>
                 <tbody>${rows.map((r) => {
-                  const note = rowNote(r);
+                  const notes = rowNotes(r);
                   return `<tr><th scope="row">${esc(r.category)} <span class="g">${esc(r.gender)}</span>
-                      ${note ? `<span class="row-note">${esc(note)}</span>` : ''}</th>
+                      ${notes.row ? `<span class="row-note">${esc(notes.row)}</span>` : ''}</th>
                     ${divisions.map((d) => {
                       const ev = r.cells[d];
                       if (!ev) return '<td class="na" aria-label="ไม่มีรุ่นนี้">–</td>';
                       return `<td><label class="tick"><input type="checkbox" value="${esc(ev.id)}" ${chosen.has(ev.id) ? 'checked' : ''} ${isOpen ? '' : 'disabled'}
-                        aria-label="${esc(sp.name + ' ' + ev.category + ' ' + ev.gender + ' ' + ev.division)}"><span></span></label></td>`;
+                        aria-label="${esc(sp.name + ' ' + ev.category + ' ' + ev.gender + ' ' + ev.division + (ev.note ? ' ' + ev.note : ''))}"><span></span>${notes.cell[d] ? `<small class="cell-note">${esc(notes.cell[d])}</small>` : ''}</label></td>`;
                     }).join('')}</tr>`;
                 }).join('')}</tbody>
               </table></div>
